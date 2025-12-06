@@ -159,7 +159,6 @@ export async function GET(req: Request) {
       enrichedCafes = [
         {
           ...DEMO_CAFE,
-          distance,
           distanceKm: distance,
           distance: distanceText,
           rating: 4.7,
