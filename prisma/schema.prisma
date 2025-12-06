@@ -79,6 +79,7 @@ enum UserRole {
   MANAGER
   OWNER
   ADMIN
+  SUPERADMIN
 }
 
 // ============================================
@@ -97,7 +98,7 @@ model Cafe {
   phone       String?
   email       String?
   timezone    String   @default("Australia/Sydney")
-  currency    String   @default("AUD")
+  currency    String   @default("MYR")
   taxRate     Float    @default(0.10)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())

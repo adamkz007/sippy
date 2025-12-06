@@ -1,8 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
-import { motion } from "framer-motion"
+import { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { 
   ArrowLeft,
   User,
@@ -23,7 +22,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 // Mock user data
@@ -53,17 +51,16 @@ const ToggleSwitch = ({
   onChange: (checked: boolean) => void 
 }) => (
   <button
+    type="button"
     onClick={() => onChange(!checked)}
     className={cn(
       "relative w-12 h-7 rounded-full transition-colors duration-200",
       checked ? "bg-espresso-700" : "bg-cream-300"
     )}
   >
-    <motion.div
-      layout
-      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+    <div
       className={cn(
-        "absolute top-1 w-5 h-5 rounded-full bg-white shadow-sm",
+        "absolute top-1 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200",
         checked ? "left-6" : "left-1"
       )}
     />
@@ -71,6 +68,7 @@ const ToggleSwitch = ({
 )
 
 export default function SettingsPage() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
@@ -81,22 +79,24 @@ export default function SettingsPage() {
   const [preferences, setPreferences] = useState(user.preferences)
   const [isEditing, setIsEditing] = useState(false)
 
-  const handleSave = () => {
+  const handleBack = useCallback(() => {
+    router.push('/home')
+  }, [router])
+
+  const handleSave = useCallback(() => {
     // Save logic here
     setIsEditing(false)
-  }
+  }, [])
 
   return (
-    <div className="min-h-screen pb-8">
+    <div className="min-h-screen pb-8 animate-in fade-in duration-200">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-cream-50/80 backdrop-blur-xl border-b border-cream-200/50 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/profile">
-              <Button variant="ghost" size="icon-sm">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
+            <Button variant="ghost" size="icon-sm" onClick={handleBack}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
             <h1 className="text-lg font-bold text-espresso-900 font-display">Settings</h1>
           </div>
           {isEditing && (
@@ -110,11 +110,7 @@ export default function SettingsPage() {
 
       <div className="px-4 py-6 space-y-6">
         {/* Profile Photo */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center"
-        >
+        <div className="flex flex-col items-center">
           <div className="relative mb-4">
             <Avatar className="w-24 h-24 border-4 border-cream-200">
               <AvatarImage src={user.image || undefined} />
@@ -132,14 +128,10 @@ export default function SettingsPage() {
           <Button variant="ghost" size="sm" onClick={() => setIsEditing(!isEditing)}>
             {isEditing ? "Cancel" : "Edit Profile"}
           </Button>
-        </motion.div>
+        </div>
 
         {/* Personal Information */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
+        <div>
           <h3 className="text-sm font-semibold text-espresso-700 mb-3 px-1">Personal Information</h3>
           <Card className="border-cream-200/50 shadow-sm">
             <CardContent className="p-4 space-y-4">
@@ -198,14 +190,10 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         {/* Notifications */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
+        <div>
           <h3 className="text-sm font-semibold text-espresso-700 mb-3 px-1 flex items-center gap-2">
             <Bell className="w-4 h-4" />
             Notifications
@@ -237,14 +225,10 @@ export default function SettingsPage() {
               ))}
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         {/* Preferences */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
+        <div>
           <h3 className="text-sm font-semibold text-espresso-700 mb-3 px-1">Preferences</h3>
           <Card className="border-cream-200/50 shadow-sm">
             <CardContent className="p-0">
@@ -262,7 +246,7 @@ export default function SettingsPage() {
                 />
               </div>
               
-              <button className="w-full flex items-center justify-between p-4">
+              <button type="button" className="w-full flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
                   <Globe className="w-5 h-5 text-espresso-600" />
                   <div className="text-left">
@@ -274,42 +258,34 @@ export default function SettingsPage() {
               </button>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         {/* Security */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
+        <div>
           <h3 className="text-sm font-semibold text-espresso-700 mb-3 px-1 flex items-center gap-2">
             <Shield className="w-4 h-4" />
             Security
           </h3>
           <Card className="border-cream-200/50 shadow-sm">
             <CardContent className="p-0">
-              <button className="w-full flex items-center justify-between p-4 border-b border-cream-200/50">
+              <button type="button" className="w-full flex items-center justify-between p-4 border-b border-cream-200/50">
                 <span className="font-medium text-espresso-900">Change Password</span>
                 <ChevronRight className="w-5 h-5 text-espresso-400" />
               </button>
-              <button className="w-full flex items-center justify-between p-4">
+              <button type="button" className="w-full flex items-center justify-between p-4">
                 <span className="font-medium text-espresso-900">Two-Factor Authentication</span>
                 <ChevronRight className="w-5 h-5 text-espresso-400" />
               </button>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         {/* Danger Zone */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
+        <div>
           <h3 className="text-sm font-semibold text-red-600 mb-3 px-1">Danger Zone</h3>
           <Card className="border-red-200 shadow-sm">
             <CardContent className="p-4">
-              <button className="w-full flex items-center gap-3 text-red-600 hover:text-red-700">
+              <button type="button" className="w-full flex items-center gap-3 text-red-600 hover:text-red-700">
                 <Trash2 className="w-5 h-5" />
                 <span className="font-medium">Delete Account</span>
               </button>
@@ -318,9 +294,8 @@ export default function SettingsPage() {
               </p>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
     </div>
   )
 }
-

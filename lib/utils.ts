@@ -5,10 +5,31 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number, currency: string = 'AUD'): string {
-  return new Intl.NumberFormat('en-AU', {
+// Supported currencies for the platform
+export const SUPPORTED_CURRENCIES = [
+  { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM', locale: 'ms-MY' },
+  { code: 'AUD', name: 'Australian Dollar', symbol: '$', locale: 'en-AU' },
+  { code: 'USD', name: 'US Dollar', symbol: '$', locale: 'en-US' },
+  { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', locale: 'en-SG' },
+  { code: 'GBP', name: 'British Pound', symbol: '£', locale: 'en-GB' },
+  { code: 'EUR', name: 'Euro', symbol: '€', locale: 'de-DE' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', locale: 'ja-JP' },
+  { code: 'THB', name: 'Thai Baht', symbol: '฿', locale: 'th-TH' },
+  { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', locale: 'id-ID' },
+  { code: 'PHP', name: 'Philippine Peso', symbol: '₱', locale: 'fil-PH' },
+] as const
+
+export type CurrencyCode = typeof SUPPORTED_CURRENCIES[number]['code']
+
+export function getCurrencyInfo(code: CurrencyCode) {
+  return SUPPORTED_CURRENCIES.find(c => c.code === code) || SUPPORTED_CURRENCIES[0]
+}
+
+export function formatCurrency(amount: number, currency: CurrencyCode = 'MYR'): string {
+  const currencyInfo = getCurrencyInfo(currency)
+  return new Intl.NumberFormat(currencyInfo.locale, {
     style: 'currency',
-    currency,
+    currency: currency,
   }).format(amount)
 }
 

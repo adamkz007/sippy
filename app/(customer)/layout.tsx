@@ -2,13 +2,12 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { 
   Home, 
   Coffee, 
   Gift, 
   User,
-  Sparkles
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -26,33 +25,28 @@ export default function CustomerLayout({
 }) {
   const pathname = usePathname()
 
-  // Check if we're on a page that should hide bottom nav (e.g., checkout, order detail)
-  const hideNav = pathname.includes("/checkout") || pathname.includes("/order/")
+  // Check if we're on a page that should hide bottom nav (e.g., checkout)
+  const hideNav = pathname.includes("/checkout")
 
   return (
-    <div className="min-h-screen bg-cream-50 max-w-md mx-auto relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden max-w-md mx-auto">
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-br from-cream-200/40 to-latte-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -left-32 w-48 h-48 bg-gradient-to-br from-espresso-100/30 to-cream-200/30 rounded-full blur-2xl" />
-      </div>
+    <div className="min-h-screen bg-cream-50 max-w-md mx-auto relative">
+      {/* Background decoration - using CSS instead of fixed elements for better performance */}
+      <div 
+        className="fixed inset-0 pointer-events-none max-w-md mx-auto"
+        style={{
+          background: `
+            radial-gradient(ellipse 300px 300px at calc(100% + 96px) -96px, rgba(253, 224, 182, 0.4), transparent),
+            radial-gradient(ellipse 200px 200px at -128px 33%, rgba(249, 235, 225, 0.3), transparent)
+          `
+        }}
+      />
 
-      {/* Main content */}
+      {/* Main content - no AnimatePresence wrapper for reliable navigation */}
       <main className={cn(
         "relative z-10 min-h-screen",
         !hideNav && "pb-24" // Add padding for bottom nav
       )}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        {children}
       </main>
 
       {/* Bottom Navigation */}
@@ -69,23 +63,24 @@ export default function CustomerLayout({
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={true}
                     className={cn(
-                      "relative flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-all duration-300",
+                      "relative flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-colors duration-200",
                       isActive 
                         ? "text-espresso-900" 
-                        : "text-espresso-400 hover:text-espresso-600"
+                        : "text-espresso-400 active:text-espresso-600"
                     )}
                   >
                     {isActive && (
                       <motion.div
                         layoutId="activeTab"
                         className="absolute inset-0 bg-cream-200/60 rounded-2xl"
-                        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                        transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
                       />
                     )}
                     <item.icon 
                       className={cn(
-                        "relative z-10 w-6 h-6 transition-transform duration-200",
+                        "relative z-10 w-6 h-6",
                         isActive && "scale-110"
                       )} 
                       strokeWidth={isActive ? 2.5 : 2}

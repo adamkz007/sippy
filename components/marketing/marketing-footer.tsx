@@ -18,32 +18,7 @@ export function MarketingFooter() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-10 gap-x-0 sm:gap-x-10 lg:gap-20 w-full">
-            <div>
-              <h4 className="font-bold text-foreground mb-4">Product</h4>
-              <ul className="space-y-3 text-muted-foreground text-sm">
-                <li>
-                  <Link href="/#product" className="hover:text-foreground">
-                    POS
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/#product" className="hover:text-foreground">
-                    Inventory
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/#product" className="hover:text-foreground">
-                    Analytics
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/#product" className="hover:text-foreground">
-                    Loyalty
-                  </Link>
-                </li>
-              </ul>
-            </div>
+          <div className="grid grid-cols-2 gap-y-10 gap-x-0 sm:gap-x-10 lg:gap-20">
             <div>
               <h4 className="font-bold text-foreground mb-4">Company</h4>
               <ul className="space-y-3 text-muted-foreground text-sm">
@@ -75,36 +50,6 @@ export function MarketingFooter() {
                 <li>
                   <Link href="/resources" className="hover:text-foreground">
                     Guides
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/resources#operations" className="hover:text-foreground">
-                    Operations
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/resources#playbooks" className="hover:text-foreground">
-                    Playbooks
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/resources#downloads" className="hover:text-foreground">
-                    Downloads
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold text-foreground mb-4">Legal</h4>
-              <ul className="space-y-3 text-muted-foreground text-sm">
-                <li>
-                  <Link href="/privacy-policy" className="hover:text-foreground">
-                    Privacy Policy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/terms-of-service" className="hover:text-foreground">
-                    Terms of Service
                   </Link>
                 </li>
               </ul>

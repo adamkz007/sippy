@@ -13,7 +13,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { formatCurrency, formatPoints } from "@/lib/utils"
+import { formatPoints } from "@/lib/utils"
+import { useCurrency } from "@/components/currency-context"
 
 // Mock data
 const stats = {
@@ -23,29 +24,70 @@ const stats = {
   crossCafeRedemptions: 12,
 }
 
-const voucherCatalog = [
-  { id: "1", name: "Free Coffee", pointsCost: 500, value: 5.50, description: "Any coffee up to $5.50", claimedCount: 89 },
-  { id: "2", name: "$5 Off", pointsCost: 400, value: 5, description: "$5 off any order", claimedCount: 156 },
-  { id: "3", name: "$10 Off", pointsCost: 750, value: 10, description: "$10 off any order", claimedCount: 45 },
-  { id: "4", name: "15% Off", pointsCost: 600, value: 15, description: "15% off entire order", claimedCount: 67 },
-  { id: "5", name: "Free Upgrade", pointsCost: 200, value: 1, description: "Free size upgrade", claimedCount: 234 },
+// Voucher catalog with values for dynamic formatting
+const voucherCatalogData = [
+  { id: "1", name: "Free Coffee", pointsCost: 500, value: 5.50, descKey: "free_coffee", claimedCount: 89 },
+  { id: "2", nameKey: "5_off", pointsCost: 400, value: 5, descKey: "5_off_desc", claimedCount: 156 },
+  { id: "3", nameKey: "10_off", pointsCost: 750, value: 10, descKey: "10_off_desc", claimedCount: 45 },
+  { id: "4", name: "15% Off", pointsCost: 600, value: 15, descKey: "percent_off", claimedCount: 67 },
+  { id: "5", name: "Free Upgrade", pointsCost: 200, value: 1, descKey: "upgrade", claimedCount: 234 },
 ]
 
-const recentRedemptions = [
-  { customer: "Alex S.", voucher: "Free Coffee", cafe: "Your Cafe", pointsUsed: 500, time: "2 hours ago" },
-  { customer: "Maya K.", voucher: "$10 Off", cafe: "Bean & Gone", pointsUsed: 750, time: "Yesterday", crossCafe: true },
-  { customer: "Jordan T.", voucher: "Free Upgrade", cafe: "Your Cafe", pointsUsed: 200, time: "Yesterday" },
-  { customer: "Sam L.", voucher: "$5 Off", cafe: "Your Cafe", pointsUsed: 400, time: "2 days ago" },
+const recentRedemptionsData = [
+  { customer: "Alex S.", voucherKey: "free_coffee", cafe: "Your Cafe", pointsUsed: 500, time: "2 hours ago" },
+  { customer: "Maya K.", voucherKey: "10_off", cafe: "Bean & Gone", pointsUsed: 750, time: "Yesterday", crossCafe: true },
+  { customer: "Jordan T.", voucherKey: "upgrade", cafe: "Your Cafe", pointsUsed: 200, time: "Yesterday" },
+  { customer: "Sam L.", voucherKey: "5_off", cafe: "Your Cafe", pointsUsed: 400, time: "2 days ago" },
 ]
 
-const tierBenefits = [
-  { tier: "BRONZE", minPoints: 0, benefits: ["1 point per $1", "Birthday reward"] },
-  { tier: "SILVER", minPoints: 1000, benefits: ["1.25 points per $1", "Free upgrade/month", "Early access"] },
-  { tier: "GOLD", minPoints: 5000, benefits: ["1.5 points per $1", "Free coffee/month", "Priority queue"] },
-  { tier: "PLATINUM", minPoints: 15000, benefits: ["2 points per $1", "Free coffee/week", "VIP events"] },
+// Function to get voucher name with currency
+const getVoucherName = (key: string, formatCurrency: (n: number) => string) => {
+  switch(key) {
+    case "5_off": return `${formatCurrency(5)} Off`
+    case "10_off": return `${formatCurrency(10)} Off`
+    case "free_coffee": return "Free Coffee"
+    case "upgrade": return "Free Upgrade"
+    default: return key
+  }
+}
+
+// Function to get voucher description with currency
+const getVoucherDesc = (key: string, formatCurrency: (n: number) => string) => {
+  switch(key) {
+    case "free_coffee": return `Any coffee up to ${formatCurrency(5.50)}`
+    case "5_off_desc": return `${formatCurrency(5)} off any order`
+    case "10_off_desc": return `${formatCurrency(10)} off any order`
+    case "percent_off": return "15% off entire order"
+    case "upgrade": return "Free size upgrade"
+    default: return key
+  }
+}
+
+// Function to get tier benefits with currency
+const getTierBenefits = (currencySymbol: string) => [
+  { tier: "BRONZE", minPoints: 0, benefits: [`1 point per ${currencySymbol}1`, "Birthday reward"] },
+  { tier: "SILVER", minPoints: 1000, benefits: [`1.25 points per ${currencySymbol}1`, "Free upgrade/month", "Early access"] },
+  { tier: "GOLD", minPoints: 5000, benefits: [`1.5 points per ${currencySymbol}1`, "Free coffee/month", "Priority queue"] },
+  { tier: "PLATINUM", minPoints: 15000, benefits: [`2 points per ${currencySymbol}1`, "Free coffee/week", "VIP events"] },
 ]
 
 export default function LoyaltyPage() {
+  const { formatCurrency, currencySymbol } = useCurrency()
+  
+  // Build dynamic data with currency
+  const voucherCatalog = voucherCatalogData.map(v => ({
+    ...v,
+    name: v.nameKey ? getVoucherName(v.nameKey, formatCurrency) : v.name,
+    description: getVoucherDesc(v.descKey, formatCurrency),
+  }))
+
+  const recentRedemptions = recentRedemptionsData.map(r => ({
+    ...r,
+    voucher: getVoucherName(r.voucherKey, formatCurrency),
+  }))
+
+  const tierBenefits = getTierBenefits(currencySymbol)
+
   return (
     <div className="space-y-6">
       {/* Header */}

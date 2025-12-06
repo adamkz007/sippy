@@ -1,4 +1,7 @@
+"use client"
+
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Coffee } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -11,6 +14,24 @@ const navItems = [
 ]
 
 export function MarketingHeader() {
+  const pathname = usePathname()
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    // Check if it's a hash link on the current page
+    if (href.startsWith("/#")) {
+      const targetId = href.slice(2) // Remove "/#"
+      const isHomePage = pathname === "/"
+      
+      if (isHomePage) {
+        e.preventDefault()
+        const element = document.getElementById(targetId)
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" })
+        }
+      }
+    }
+  }
+
   return (
     <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
       <header className="w-full max-w-5xl bg-white/90 backdrop-blur-xl border border-border/50 rounded-full shadow-xl shadow-primary/5 pl-6 pr-2 py-2 flex items-center justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10">
@@ -26,6 +47,7 @@ export function MarketingHeader() {
             <Link
               key={item.label}
               href={item.href}
+              onClick={(e) => handleNavClick(e, item.href)}
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {item.label}
@@ -45,7 +67,7 @@ export function MarketingHeader() {
             asChild
             className="bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full px-6 h-10 shadow-lg shadow-secondary/20 transition-transform hover:scale-105 active:scale-95 font-bold"
           >
-            <Link href="/register">Book a Demo</Link>
+            <Link href="/register">Let's talk</Link>
           </Button>
         </div>
       </header>

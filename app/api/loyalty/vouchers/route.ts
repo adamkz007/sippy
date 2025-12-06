@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { generateVoucherCode } from "@/lib/utils"
+import { generateVoucherCode, formatCurrency, getCurrencyInfo } from "@/lib/utils"
 
 export const dynamic = 'force-dynamic'
 
@@ -14,14 +14,20 @@ const claimVoucherSchema = z.object({
   pointsCost: z.number(),
 })
 
-// Voucher catalog - could be in DB but simpler for now
-const voucherCatalog = [
-  { type: "FREE_DRINK", name: "Free Coffee", value: 5.50, pointsCost: 500, description: "Any coffee up to $5.50" },
-  { type: "FIXED_AMOUNT", name: "$5 Off", value: 5, pointsCost: 400, description: "$5 off any order" },
-  { type: "FIXED_AMOUNT", name: "$10 Off", value: 10, pointsCost: 750, description: "$10 off any order" },
-  { type: "PERCENTAGE_OFF", name: "15% Off", value: 15, pointsCost: 600, description: "15% off entire order" },
-  { type: "FREE_UPGRADE", name: "Free Size Upgrade", value: 1, pointsCost: 200, description: "Free upgrade to large" },
-]
+// Get voucher catalog with formatted currency (default MYR)
+const getVoucherCatalog = (currency: 'MYR' | 'AUD' | 'USD' | 'SGD' = 'MYR') => {
+  const format = (amount: number) => formatCurrency(amount, currency)
+  return [
+    { type: "FREE_DRINK", name: "Free Coffee", value: 5.50, pointsCost: 500, description: `Any coffee up to ${format(5.50)}` },
+    { type: "FIXED_AMOUNT", name: `${format(5)} Off`, value: 5, pointsCost: 400, description: `${format(5)} off any order` },
+    { type: "FIXED_AMOUNT", name: `${format(10)} Off`, value: 10, pointsCost: 750, description: `${format(10)} off any order` },
+    { type: "PERCENTAGE_OFF", name: "15% Off", value: 15, pointsCost: 600, description: "15% off entire order" },
+    { type: "FREE_UPGRADE", name: "Free Size Upgrade", value: 1, pointsCost: 200, description: "Free upgrade to large" },
+  ]
+}
+
+// Default catalog for backward compatibility
+const voucherCatalog = getVoucherCatalog('MYR')
 
 export async function GET(req: Request) {
   try {

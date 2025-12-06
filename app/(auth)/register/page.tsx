@@ -105,7 +105,7 @@ function RegisterContent() {
       sessionStorage.setItem("signupAccountType", accountType)
       
       await signIn("google", {
-        callbackUrl: accountType === "cafe" ? "/setup-cafe" : "/",
+        callbackUrl: accountType === "cafe" ? "/setup-cafe" : "/home",
       })
     } catch (error) {
       toast({
@@ -226,7 +226,7 @@ function RegisterContent() {
           <Button
             type="button"
             variant="outline"
-            className="w-full mb-6 h-12 text-base"
+            className="w-full mb-6 h-12 text-base bg-white border-2 border-espresso-200 text-espresso-900 hover:bg-espresso-50 hover:border-espresso-300 hover:text-espresso-950"
             onClick={handleGoogleSignUp}
             disabled={isGoogleLoading}
           >
@@ -332,13 +332,16 @@ function RegisterContent() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone (optional)</Label>
+              <Label htmlFor="phone">
+                Phone{accountType === "cafe" ? " (optional)" : ""}
+              </Label>
               <Input
                 id="phone"
                 type="tel"
                 placeholder="+61 400 000 000"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                required={accountType === "customer"}
               />
             </div>
 

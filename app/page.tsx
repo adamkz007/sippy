@@ -5,6 +5,7 @@ import { MarketingFooter } from "@/components/marketing/marketing-footer"
 import { MarketingHeader } from "@/components/marketing/marketing-header"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { formatCurrency } from "@/lib/utils"
 
 export default function HomePage() {
   return (
@@ -116,7 +117,7 @@ export default function HomePage() {
                    <div className="mt-auto w-full bg-cream-200/20 rounded-2xl border border-cream-200/30 p-6 backdrop-blur-sm">
                       <div className="flex justify-between items-end mb-2">
                          <div className="text-sm text-cream-200/70">Net Sales</div>
-                         <div className="text-2xl font-bold text-cream-100">$12,450</div>
+                         <div className="text-2xl font-bold text-cream-100">{formatCurrency(12450)}</div>
                       </div>
                       <div className="h-1 w-full bg-cream-200/20 rounded-full overflow-hidden">
                          <div className="h-full w-[70%] bg-cream-200 rounded-full" />

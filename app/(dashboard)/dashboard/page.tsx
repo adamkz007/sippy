@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useCurrency } from "@/components/currency-context"
 
 // Mock data - in production this would come from API
 const stats = {
@@ -42,6 +43,8 @@ const topProducts = [
 ]
 
 export default function DashboardPage() {
+  const { formatCurrency } = useCurrency()
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -62,7 +65,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Today's Revenue"
-          value={`$${stats.todayRevenue.toFixed(2)}`}
+          value={formatCurrency(stats.todayRevenue)}
           change={stats.revenueChange}
           icon={DollarSign}
         />
@@ -74,7 +77,7 @@ export default function DashboardPage() {
         />
         <StatsCard
           title="Avg. Ticket"
-          value={`$${stats.avgTicket.toFixed(2)}`}
+          value={formatCurrency(stats.avgTicket)}
           icon={Coffee}
         />
         <StatsCard
@@ -123,7 +126,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">${order.total.toFixed(2)}</p>
+                    <p className="font-medium">{formatCurrency(order.total)}</p>
                     <OrderStatusBadge status={order.status} />
                   </div>
                 </div>
@@ -159,7 +162,7 @@ export default function DashboardPage() {
                       <p className="text-xs text-muted-foreground">{product.orders} orders</p>
                     </div>
                   </div>
-                  <p className="font-medium">${product.revenue.toFixed(2)}</p>
+                  <p className="font-medium">{formatCurrency(product.revenue)}</p>
                 </div>
               ))}
             </div>

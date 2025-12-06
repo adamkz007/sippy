@@ -8,13 +8,17 @@ import {
   Palette,
   Shield,
   Link2,
-  ChevronRight
+  ChevronRight,
+  DollarSign,
+  Check
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { useCurrency, SUPPORTED_CURRENCIES, CurrencyCode } from "@/components/currency-context"
+import { cn } from "@/lib/utils"
 
 const settingsGroups = [
   {
@@ -22,6 +26,12 @@ const settingsGroups = [
     description: "Manage your cafe details and branding",
     icon: Store,
     items: ["Business Info", "Operating Hours", "Location", "Branding"]
+  },
+  {
+    title: "Currency",
+    description: "Set your display currency",
+    icon: DollarSign,
+    items: ["Display Currency", "Price Format"]
   },
   {
     title: "Payments",
@@ -56,6 +66,8 @@ const settingsGroups = [
 ]
 
 export default function SettingsPage() {
+  const { currency, setCurrency } = useCurrency()
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
@@ -88,25 +100,64 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="address">Address</Label>
-            <Input id="address" defaultValue="123 Coffee Street, Melbourne VIC 3000" />
+            <Input id="address" defaultValue="123 Coffee Street, Kuala Lumpur" />
           </div>
           <div className="grid md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" defaultValue="+61 3 9999 8888" />
+              <Input id="phone" defaultValue="+60 3 1234 5678" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" defaultValue="hello@dailygrind.com.au" />
+              <Input id="email" defaultValue="hello@dailygrind.my" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="timezone">Timezone</Label>
-              <Input id="timezone" defaultValue="Australia/Sydney" disabled />
+              <Input id="timezone" defaultValue="Asia/Kuala_Lumpur" disabled />
             </div>
           </div>
           <div className="flex justify-end">
             <Button>Save Changes</Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Currency Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5" />
+            Currency Settings
+          </CardTitle>
+          <CardDescription>Set your display currency for all prices and transactions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {SUPPORTED_CURRENCIES.map((curr) => (
+              <button
+                key={curr.code}
+                onClick={() => setCurrency(curr.code as CurrencyCode)}
+                className={cn(
+                  "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all hover:border-espresso-300",
+                  currency === curr.code
+                    ? "border-espresso-600 bg-espresso-50"
+                    : "border-muted bg-background"
+                )}
+              >
+                {currency === curr.code && (
+                  <div className="absolute top-2 right-2">
+                    <Check className="w-4 h-4 text-espresso-600" />
+                  </div>
+                )}
+                <span className="text-2xl font-bold text-espresso-800">{curr.symbol}</span>
+                <span className="text-sm font-medium mt-1">{curr.code}</span>
+                <span className="text-xs text-muted-foreground text-center mt-0.5">{curr.name}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground mt-4">
+            Current currency: <span className="font-medium text-espresso-800">{currency}</span> — This will be used across your dashboard and customer-facing pages.
+          </p>
         </CardContent>
       </Card>
 

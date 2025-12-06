@@ -51,7 +51,7 @@ function LoginContent() {
             ? "Redirecting to your dashboard..." 
             : "Redirecting...",
         })
-        router.push(accountType === "cafe" ? "/dashboard" : "/")
+        router.push(accountType === "cafe" ? "/dashboard" : "/home")
         router.refresh()
       }
     } catch (error) {
@@ -69,7 +69,7 @@ function LoginContent() {
     setIsGoogleLoading(true)
     try {
       await signIn("google", {
-        callbackUrl: accountType === "cafe" ? "/dashboard" : "/",
+        callbackUrl: accountType === "cafe" ? "/dashboard" : "/home",
       })
     } catch (error) {
       toast({
@@ -227,7 +227,7 @@ function LoginContent() {
               Don&apos;t have an account?{" "}
               <Link 
                 href={`/register?type=${accountType}`} 
-                className="text-primary hover:underline font-medium"
+                className="text-secondary hover:underline font-medium"
               >
                 Sign up
               </Link>

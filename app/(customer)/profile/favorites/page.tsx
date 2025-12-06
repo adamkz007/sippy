@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import Link from "next/link"
-import { motion, AnimatePresence } from "framer-motion"
+import { useRouter } from "next/navigation"
 import { 
   ArrowLeft,
   Heart,
@@ -65,22 +65,27 @@ const initialFavorites = [
 ]
 
 export default function FavoritesPage() {
+  const router = useRouter()
   const [favorites, setFavorites] = useState(initialFavorites)
 
-  const removeFavorite = (id: string) => {
+  const handleBack = useCallback(() => {
+    router.push('/home')
+  }, [router])
+
+  const removeFavorite = (id: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     setFavorites(favorites.filter(f => f.id !== id))
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen animate-in fade-in duration-200">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-cream-50/80 backdrop-blur-xl border-b border-cream-200/50 px-4 py-3">
         <div className="flex items-center gap-3">
-          <Link href="/profile">
-            <Button variant="ghost" size="icon-sm">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon-sm" onClick={handleBack}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
           <h1 className="text-lg font-bold text-espresso-900 font-display">Favorite Cafes</h1>
         </div>
       </header>
@@ -99,80 +104,69 @@ export default function FavoritesPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            <AnimatePresence>
-              {favorites.map((cafe, index) => (
-                <motion.div
-                  key={cafe.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
-                  transition={{ delay: index * 0.05 }}
-                  layout
-                >
-                  <Card className={cn(
-                    "overflow-hidden border-cream-200/50 shadow-sm",
-                    !cafe.isOpen && "opacity-70"
-                  )}>
-                    <CardContent className="p-0">
-                      <div className="flex">
-                        {/* Cafe Image */}
-                        <Link href={`/order/${cafe.slug}`} className="relative w-28 h-28 shrink-0">
-                          <div 
-                            className="absolute inset-0 bg-cover bg-center"
-                            style={{ backgroundImage: `url(${cafe.image})` }}
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10" />
-                          {!cafe.isOpen && (
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                              <Badge className="bg-white text-espresso-900 text-[10px]">Closed</Badge>
-                            </div>
-                          )}
-                        </Link>
+            {favorites.map((cafe) => (
+              <Link key={cafe.id} href={`/order/${cafe.slug}`}>
+                <Card className={cn(
+                  "overflow-hidden border-cream-200/50 shadow-sm hover:shadow-md transition-shadow",
+                  !cafe.isOpen && "opacity-70"
+                )}>
+                  <CardContent className="p-0">
+                    <div className="flex">
+                      {/* Cafe Image */}
+                      <div className="relative w-28 h-28 shrink-0">
+                        <div 
+                          className="absolute inset-0 bg-cover bg-center"
+                          style={{ backgroundImage: `url(${cafe.image})` }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10" />
+                        {!cafe.isOpen && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <Badge className="bg-white text-espresso-900 text-[10px]">Closed</Badge>
+                          </div>
+                        )}
+                      </div>
 
-                        {/* Cafe Info */}
-                        <div className="flex-1 p-3">
-                          <Link href={`/order/${cafe.slug}`}>
-                            <div className="flex items-start justify-between mb-1">
-                              <h3 className="font-semibold text-espresso-900">{cafe.name}</h3>
-                              <div className="flex items-center gap-1 bg-cream-100 px-2 py-0.5 rounded-full">
-                                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                <span className="text-xs font-semibold text-espresso-800">{cafe.rating}</span>
-                              </div>
-                            </div>
-                            
-                            <p className="text-xs text-espresso-500 mb-1">{cafe.address}</p>
-                            
-                            <div className="flex items-center gap-3 text-xs text-espresso-500 mb-2">
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {cafe.distance}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {cafe.prepTime}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2 text-xs text-espresso-500">
-                              <Coffee className="w-3 h-3" />
-                              <span>{cafe.totalOrders} orders · Last visited {cafe.lastVisited}</span>
-                            </div>
-                          </Link>
+                      {/* Cafe Info */}
+                      <div className="flex-1 p-3">
+                        <div className="flex items-start justify-between mb-1">
+                          <h3 className="font-semibold text-espresso-900">{cafe.name}</h3>
+                          <div className="flex items-center gap-1 bg-cream-100 px-2 py-0.5 rounded-full">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            <span className="text-xs font-semibold text-espresso-800">{cafe.rating}</span>
+                          </div>
+                        </div>
+                        
+                        <p className="text-xs text-espresso-500 mb-1">{cafe.address}</p>
+                        
+                        <div className="flex items-center gap-3 text-xs text-espresso-500 mb-2">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {cafe.distance}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {cafe.prepTime}
+                          </span>
                         </div>
 
-                        {/* Remove Button */}
-                        <button
-                          onClick={() => removeFavorite(cafe.id)}
-                          className="px-3 flex items-center justify-center border-l border-cream-200/50 text-espresso-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-2 text-xs text-espresso-500">
+                          <Coffee className="w-3 h-3" />
+                          <span>{cafe.totalOrders} orders · Last visited {cafe.lastVisited}</span>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+
+                      {/* Remove Button */}
+                      <button
+                        onClick={(e) => removeFavorite(cafe.id, e)}
+                        className="px-3 flex items-center justify-center border-l border-cream-200/50 text-espresso-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
           </div>
         )}
 
@@ -190,4 +184,3 @@ export default function FavoritesPage() {
     </div>
   )
 }
-

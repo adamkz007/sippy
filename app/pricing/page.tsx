@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 const plans = [
   {
     name: "Starter",
-    price: "$39",
+    price: "RM149",
     cadence: "per month",
     description: "Ideal for new locations getting off spreadsheets.",
     features: [
@@ -23,7 +23,7 @@ const plans = [
   },
   {
     name: "Growth",
-    price: "$89",
+    price: "RM349",
     cadence: "per month",
     description: "For busy cafes that need automation and loyalty.",
     features: [
@@ -39,7 +39,7 @@ const plans = [
   {
     name: "Enterprise",
     price: "Custom",
-    cadence: "let’s design it",
+    cadence: "let's design it",
     description: "Multi-location teams with governance & integrations.",
     features: [
       "All Growth features",
@@ -48,7 +48,7 @@ const plans = [
       "Menu and pricing controls by region",
       "Dedicated CSM & on-site training",
     ],
-    cta: "Book a demo",
+    cta: "Let's talk",
   },
 ]
 
@@ -95,7 +95,7 @@ export default function PricingPage() {
           <Badge variant="outline" className="mb-6 bg-white/80">
             Pricing
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight mb-4">
+          <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight mb-4">
             Pricing built for busy cafes
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">

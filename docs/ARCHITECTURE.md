@@ -55,8 +55,8 @@ Sippy follows a microservices architecture designed for scalability, reliability
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │
-│  │ PostgreSQL  │ │    Redis    │ │ TimescaleDB │ │   S3/GCS    │          │
-│  │  (Primary)  │ │   (Cache)   │ │  (Metrics)  │ │  (Storage)  │          │
+│  │ PostgreSQL  │ │    Redis    │ │ TimescaleDB │ │ Vercel Blob │          │
+│  │  (Primary)  │ │   (Cache)   │ │  (Metrics)  │ │   (Media)   │          │
 │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘          │
 │                                                                              │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                           │
@@ -285,7 +285,7 @@ Sippy follows a microservices architecture designed for scalability, reliability
 │  Dependencies:                                   │
 │  ├── PostgreSQL (catalog data)                  │
 │  ├── Redis (menu cache)                         │
-│  ├── S3/GCS (product images)                    │
+│  ├── Vercel Blob (product images)               │
 │  └── Elasticsearch (product search)             │
 ├─────────────────────────────────────────────────┤
 │  Events Published:                               │
@@ -708,7 +708,7 @@ interface OrderCreatedEvent extends BaseEvent {
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                          │
 │  External Services                                                       │
-│  ├── S3 (Static assets, backups)                                        │
+│  ├── Vercel Blob (Media storage)                                        │
 │  ├── CloudFront (CDN)                                                   │
 │  ├── Route 53 (DNS)                                                     │
 │  ├── SES (Email)                                                        │
@@ -871,7 +871,7 @@ spec:
 |-----------|------------------|-----------|-----|-----|
 | PostgreSQL | Continuous (WAL) + Daily full | 30 days | 1 hour | 5 minutes |
 | Redis | Hourly snapshots | 7 days | 15 minutes | 1 hour |
-| S3 | Cross-region replication | Forever | Instant | Instant |
+| Vercel Blob | Edge-replicated globally | Forever | Instant | Instant |
 | Kafka | Multi-AZ replication | 7 days | 5 minutes | 0 |
 
 ### Failover Architecture
@@ -917,6 +917,7 @@ spec:
 | Backend | NestJS (Node.js) | Microservices |
 | Database | PostgreSQL | Primary data store |
 | Cache | Redis | Session, caching |
+| Media Storage | Vercel Blob | Product images, cafe assets |
 | Message Queue | Kafka | Event streaming |
 | Search | Elasticsearch | Full-text search |
 | ML | Python, TensorFlow | Coffee profiles |

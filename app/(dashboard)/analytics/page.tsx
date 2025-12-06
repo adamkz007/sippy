@@ -17,7 +17,7 @@ import { formatCurrency } from "@/lib/utils"
 
 // Mock data
 const periodStats = {
-  revenue: { current: 12450.00, previous: 11200.00 },
+  revenue: { current: 12450, previous: 11200 },
   orders: { current: 856, previous: 792 },
   avgTicket: { current: 14.54, previous: 14.14 },
   customers: { current: 234, previous: 198 },

@@ -96,7 +96,7 @@ This document outlines the phased implementation strategy for Sippy, breaking do
 │   ├── Menu builder UI
 │   ├── Drag-and-drop organization
 │   ├── Bulk import/export
-│   └── Image upload & optimization
+│   └── Image upload to Vercel Blob & optimization
 └── POS Display
     ├── Grid-based menu layout
     ├── Quick search
@@ -766,6 +766,10 @@ Backend:
 ├── PostgreSQL
 ├── Redis
 └── BullMQ
+
+Media Storage:
+├── Vercel Blob (product images, cafe logos, receipts)
+└── Automatic CDN distribution via Vercel Edge Network
 
 Mobile:
 ├── React Native

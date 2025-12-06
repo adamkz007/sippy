@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 import { motion } from "framer-motion"
 import { 
   Gift, 
@@ -13,25 +14,37 @@ import {
   Check,
   TrendingUp,
   Trophy,
-  Zap
+  Zap,
+  Loader2
 } from "lucide-react"
-import { cn, formatCurrency, formatPoints, getTierColor } from "@/lib/utils"
+import { cn, formatCurrency, formatPoints, getTierColor, getCurrencyInfo } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 
-// Mock data
-const customerLoyalty = {
-  pointsBalance: 1250,
-  lifetimePoints: 5420,
-  tier: "GOLD",
-  nextTier: "PLATINUM",
-  pointsToNextTier: 9580,
-  streakDays: 7,
+interface CustomerProfile {
+  id: string
+  loyalty: {
+    tier: string
+    pointsBalance: number
+    lifetimePoints: number
+    lifetimeSpend: number
+  }
+  vouchers: any[]
 }
 
-const availableRewards = [
+interface PointTransaction {
+  id: string
+  type: string
+  points: number
+  description: string
+  createdAt: string
+  cafeId: string
+}
+
+// Rewards data factory function
+const getAvailableRewards = (formatCurrency: (n: number) => string) => [
   {
     id: "1",
     name: "Free Flat White",
@@ -43,8 +56,8 @@ const availableRewards = [
   },
   {
     id: "2",
-    name: "$5 Off",
-    description: "On orders over $15",
+    name: `${formatCurrency(5)} Off`,
+    description: `On orders over ${formatCurrency(15)}`,
     pointsCost: 450,
     image: "💰",
     expiresIn: "14 days",
@@ -70,51 +83,13 @@ const availableRewards = [
   },
 ]
 
-const recentTransactions = [
-  {
-    id: "1",
-    type: "EARN",
-    points: 12,
-    description: "Purchase at The Daily Grind",
-    cafe: "The Daily Grind",
-    date: "Today, 9:15 AM",
-    orderId: "A-042",
-  },
-  {
-    id: "2",
-    type: "EARN",
-    points: 8,
-    description: "Purchase at Brew Lab",
-    cafe: "Brew Lab",
-    date: "Yesterday, 3:30 PM",
-    orderId: "B-118",
-  },
-  {
-    id: "3",
-    type: "REDEEM",
-    points: -500,
-    description: "Redeemed Free Flat White",
-    cafe: "Coffee Collective",
-    date: "3 days ago",
-    orderId: "C-055",
-  },
-  {
-    id: "4",
-    type: "BONUS",
-    points: 50,
-    description: "7-day streak bonus!",
-    cafe: null,
-    date: "3 days ago",
-    orderId: null,
-  },
-]
-
-const tierBenefits = {
-  BRONZE: ["1 point per $1 spent", "Birthday reward", "Early access to promotions"],
+// Tier benefits factory function
+const getTierBenefits = (currencySymbol: string) => ({
+  BRONZE: [`1 point per ${currencySymbol}1 spent`, "Birthday reward", "Early access to promotions"],
   SILVER: ["1.25x points multiplier", "Free size upgrade monthly", "Priority support"],
   GOLD: ["1.5x points multiplier", "Free drink monthly", "Exclusive tastings", "Skip the line"],
   PLATINUM: ["2x points multiplier", "Free drink weekly", "VIP events", "Personal barista"],
-}
+})
 
 const getTierProgress = (tier: string) => {
   switch (tier) {
@@ -126,10 +101,102 @@ const getTierProgress = (tier: string) => {
   }
 }
 
+const getNextTier = (tier: string) => {
+  switch (tier) {
+    case "BRONZE": return "SILVER"
+    case "SILVER": return "GOLD"
+    case "GOLD": return "PLATINUM"
+    case "PLATINUM": return "PLATINUM"
+    default: return "SILVER"
+  }
+}
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffTime = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 0) {
+    return `Today, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+  } else if (diffDays === 1) {
+    return `Yesterday, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+  } else if (diffDays < 7) {
+    return `${diffDays} days ago`
+  } else {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+}
+
 export default function LoyaltyPage() {
+  const { data: session, status: sessionStatus } = useSession()
   const [activeTab, setActiveTab] = useState<"rewards" | "history">("rewards")
+  const [profile, setProfile] = useState<CustomerProfile | null>(null)
+  const [transactions, setTransactions] = useState<PointTransaction[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      if (sessionStatus === "loading") return
+      if (!session) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        // Fetch customer profile
+        const profileRes = await fetch("/api/customer/me")
+        if (profileRes.ok) {
+          const profileData = await profileRes.json()
+          setProfile(profileData)
+        }
+      } catch (err) {
+        console.error("Error fetching loyalty data:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [session, sessionStatus])
+
+  const customerLoyalty = profile?.loyalty || {
+    pointsBalance: 0,
+    lifetimePoints: 0,
+    tier: "BRONZE",
+  }
+
   const tierProgress = getTierProgress(customerLoyalty.tier)
+  const nextTier = getNextTier(customerLoyalty.tier)
+  const pointsToNextTier = tierProgress.max - customerLoyalty.lifetimePoints
   const progressPercent = ((customerLoyalty.lifetimePoints - tierProgress.min) / (tierProgress.max - tierProgress.min)) * 100
+  
+  // Use default currency (MYR)
+  const currencyInfo = getCurrencyInfo('MYR')
+  const availableRewards = getAvailableRewards(formatCurrency)
+  const tierBenefits = getTierBenefits(currencyInfo.symbol)
+
+  // Mock streak data (could be fetched from API)
+  const streakDays = 7
+
+  if (loading || sessionStatus === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-espresso-600" />
+      </div>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4">
+        <h2 className="text-xl font-bold text-espresso-900">Sign in to view rewards</h2>
+        <Link href="/login">
+          <Button>Sign In</Button>
+        </Link>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen">
@@ -169,7 +236,7 @@ export default function LoyaltyPage() {
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-cream-200">{customerLoyalty.tier}</span>
-              <span className="text-sm text-cream-200">{customerLoyalty.nextTier}</span>
+              <span className="text-sm text-cream-200">{nextTier}</span>
             </div>
             <div className="h-2 bg-white/20 rounded-full overflow-hidden mb-2">
               <motion.div 
@@ -180,12 +247,18 @@ export default function LoyaltyPage() {
               />
             </div>
             <p className="text-xs text-cream-300 text-center">
-              <span className="font-semibold">{formatPoints(customerLoyalty.pointsToNextTier)}</span> points to {customerLoyalty.nextTier}
+              {customerLoyalty.tier === "PLATINUM" ? (
+                "You've reached the highest tier! 🎉"
+              ) : (
+                <>
+                  <span className="font-semibold">{formatPoints(Math.max(0, pointsToNextTier))}</span> points to {nextTier}
+                </>
+              )}
             </p>
           </div>
 
           {/* Streak */}
-          {customerLoyalty.streakDays > 0 && (
+          {streakDays > 0 && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -194,7 +267,7 @@ export default function LoyaltyPage() {
             >
               <Zap className="w-4 h-4 text-amber-400" />
               <span className="text-sm text-cream-200">
-                {customerLoyalty.streakDays}-day streak! Keep it going for bonus points
+                {streakDays}-day streak! Keep it going for bonus points
               </span>
             </motion.div>
           )}
@@ -228,7 +301,32 @@ export default function LoyaltyPage() {
             animate={{ opacity: 1 }}
             className="space-y-4"
           >
+            {/* My Vouchers */}
+            {profile?.vouchers && profile.vouchers.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-espresso-700 mb-3 px-1">My Vouchers ({profile.vouchers.length})</h3>
+                <div className="space-y-2">
+                  {profile.vouchers.map((voucher) => (
+                    <Card key={voucher.id} className="border-green-200 bg-green-50/50">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-espresso-900">{voucher.type.replace(/_/g, ' ')}</p>
+                            <p className="text-xs text-espresso-500">
+                              Code: {voucher.code} · Expires {new Date(voucher.expiresAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge className="bg-green-100 text-green-700">Active</Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Available Rewards */}
+            <h3 className="text-sm font-semibold text-espresso-700 mb-3 px-1">Redeem Points</h3>
             <div className="grid gap-3">
               {availableRewards.map((reward, index) => {
                 const canAfford = customerLoyalty.pointsBalance >= reward.pointsCost
@@ -319,45 +417,54 @@ export default function LoyaltyPage() {
             animate={{ opacity: 1 }}
             className="space-y-2"
           >
-            {recentTransactions.map((txn, index) => (
-              <motion.div
-                key={txn.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="flex items-center gap-4 p-3 bg-white rounded-xl border border-cream-200/50"
-              >
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center",
-                  txn.type === "EARN" && "bg-green-100 text-green-600",
-                  txn.type === "REDEEM" && "bg-blue-100 text-blue-600",
-                  txn.type === "BONUS" && "bg-amber-100 text-amber-600",
-                )}>
-                  {txn.type === "EARN" && <TrendingUp className="w-5 h-5" />}
-                  {txn.type === "REDEEM" && <Gift className="w-5 h-5" />}
-                  {txn.type === "BONUS" && <Zap className="w-5 h-5" />}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-espresso-900">{txn.description}</p>
-                  <p className="text-xs text-espresso-500">{txn.date}</p>
-                </div>
-                <div className={cn(
-                  "font-bold",
-                  txn.points > 0 ? "text-green-600" : "text-espresso-600"
-                )}>
-                  {txn.points > 0 ? "+" : ""}{formatPoints(txn.points)}
-                </div>
-              </motion.div>
-            ))}
+            {transactions.length === 0 ? (
+              <div className="text-center py-12">
+                <TrendingUp className="w-12 h-12 text-espresso-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-espresso-700 mb-2">No transactions yet</h3>
+                <p className="text-sm text-espresso-500">Start earning points by making purchases!</p>
+              </div>
+            ) : (
+              transactions.map((txn, index) => (
+                <motion.div
+                  key={txn.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-center gap-4 p-3 bg-white rounded-xl border border-cream-200/50"
+                >
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center",
+                    txn.type === "EARN" && "bg-green-100 text-green-600",
+                    txn.type === "REDEEM" && "bg-blue-100 text-blue-600",
+                    txn.type === "BONUS" && "bg-amber-100 text-amber-600",
+                  )}>
+                    {txn.type === "EARN" && <TrendingUp className="w-5 h-5" />}
+                    {txn.type === "REDEEM" && <Gift className="w-5 h-5" />}
+                    {txn.type === "BONUS" && <Zap className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-espresso-900">{txn.description}</p>
+                    <p className="text-xs text-espresso-500">{formatDate(txn.createdAt)}</p>
+                  </div>
+                  <div className={cn(
+                    "font-bold",
+                    txn.points > 0 ? "text-green-600" : "text-espresso-600"
+                  )}>
+                    {txn.points > 0 ? "+" : ""}{formatPoints(txn.points)}
+                  </div>
+                </motion.div>
+              ))
+            )}
 
-            <Button variant="ghost" className="w-full mt-4">
-              Load more
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
+            {transactions.length > 0 && (
+              <Button variant="ghost" className="w-full mt-4">
+                Load more
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            )}
           </motion.div>
         )}
       </div>
     </div>
   )
 }
-

@@ -79,21 +79,17 @@ Sippy envisions a world where coffee lovers are rewarded for their passion regar
 - **Refunds & Voids**: With manager authorization trails
 - **Receipt Options**: Print, SMS, email, no receipt
 
-#### 1.3 Staff Management
-- **Clock In/Out**: Time tracking with break management
-- **Role-Based Access**: Admin, manager, cashier, barista permissions
-- **Performance Metrics**: Orders processed, average transaction value
-- **Tip Distribution**: Fair split calculations
-
 ### 2. Online Ordering
 
 #### 2.1 Customer-Facing App/Web
+- **Explore Cafe**: Find cafes nearby, get directions, save as favorite
 - **Menu Browsing**: High-quality images, descriptions, allergen info
 - **Customization**: Full modifier support matching in-store options
 - **Scheduling**: Order ahead for specific pickup times
 - **Real-Time Status**: Order received → Preparing → Ready
 - **Reorder**: Quick access to past orders
 - **Favorites**: Save frequent orders for one-tap reordering
+- **AI Coffee Profile**: Build profile based on past orders; powered by LLM
 
 #### 2.2 Cafe Integration
 - **Order Injection**: Seamless flow into POS queue
@@ -104,24 +100,11 @@ Sippy envisions a world where coffee lovers are rewarded for their passion regar
 
 ### 3. Cafe & Table Management
 
-#### 3.1 Floor Plan
-- **Visual Layout**: Drag-and-drop table arrangement
-- **Table Status**: Available, occupied, reserved, needs cleaning
-- **Capacity Tracking**: Real-time occupancy vs. maximum
-- **Section Assignment**: Divide floor among servers
-
-#### 3.2 Reservations
+#### 3.1 Reservations
 - **Online Booking**: Customer self-service reservations
 - **Walk-in Management**: Waitlist with estimated times
-- **Party Size Handling**: Auto-assign appropriate tables
 - **Special Occasions**: Flag birthdays, anniversaries
 - **No-Show Tracking**: Customer reliability scoring
-
-#### 3.3 Service Flow
-- **Course Timing**: Coordinate multi-course service
-- **Table Merge/Split**: Handle group changes dynamically
-- **Server Handoff**: Transfer tables between staff
-- **Time Tracking**: Alert for tables waiting too long
 
 ### 4. Sales Tracking & Reporting
 
@@ -139,7 +122,7 @@ Sippy envisions a world where coffee lovers are rewarded for their passion regar
 
 #### 4.3 Financial Reports
 - **End-of-Day Summary**: Cash reconciliation, card batches
-- **Tax Reports**: GST/VAT breakdown by category
+- **Tax Reports**: GST breakdown by category
 - **Profit & Loss**: Revenue vs. COGS analysis
 - **Export Options**: CSV, PDF, accounting software integration
 
@@ -227,6 +210,11 @@ Sippy envisions a world where coffee lovers are rewarded for their passion regar
 - End-to-end encryption for payment data
 - SOC 2 Type II certification
 - GDPR/CCPA compliance for customer data
+
+### Media Storage
+- Vercel Blob for all media assets (product images, cafe logos, receipts)
+- Global CDN distribution via Vercel Edge Network
+- Automatic image optimization and resizing
 
 ### Integrations
 - Payment processors: Stripe, Square, Adyen

@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 import { motion } from "framer-motion"
 import { 
   Search, 
@@ -14,7 +15,8 @@ import {
   Gift,
   TrendingUp,
   Navigation,
-  Heart
+  Heart,
+  Loader2
 } from "lucide-react"
 import { cn, formatCurrency } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -22,7 +24,33 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-// Mock data
+interface CustomerProfile {
+  id: string
+  user: {
+    name: string | null
+    email: string
+  }
+  loyalty: {
+    tier: string
+    pointsBalance: number
+  }
+  vouchers: any[]
+  stats: {
+    totalOrders: number
+    favoriteCafes: number
+  }
+}
+
+interface Cafe {
+  id: string
+  name: string
+  slug: string
+  image: string | null
+  address: string | null
+  city: string | null
+}
+
+// Static cafe data with computed fields
 const featuredCafes = [
   {
     id: "1",
@@ -71,7 +99,7 @@ const quickReorders = [
     name: "Flat White",
     cafe: "The Daily Grind",
     cafeSlug: "daily-grind",
-    price: 5.50,
+    price: 14.00,
     lastOrdered: "2 days ago",
     modifiers: "Oat milk, extra shot",
   },
@@ -80,7 +108,7 @@ const quickReorders = [
     name: "Cold Brew",
     cafe: "Brew Lab",
     cafeSlug: "brew-lab",
-    price: 6.00,
+    price: 14.00,
     lastOrdered: "5 days ago",
     modifiers: "Large",
   },
@@ -99,9 +127,46 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } }
 }
 
+const getGreeting = () => {
+  const hour = new Date().getHours()
+  if (hour < 12) return "Good morning ☕"
+  if (hour < 17) return "Good afternoon ☕"
+  return "Good evening ☕"
+}
+
 export default function HomePage() {
+  const { data: session, status: sessionStatus } = useSession()
   const [searchQuery, setSearchQuery] = useState("")
-  const points = 1250 // Mock user points
+  const [profile, setProfile] = useState<CustomerProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (sessionStatus === "loading") return
+      if (!session) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch("/api/customer/me")
+        if (res.ok) {
+          const data = await res.json()
+          setProfile(data)
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProfile()
+  }, [session, sessionStatus])
+
+  const points = profile?.loyalty?.pointsBalance || 0
+  const voucherCount = profile?.vouchers?.length || 0
+  const userName = profile?.user?.name || session?.user?.name || "Guest"
 
   return (
     <motion.div 
@@ -114,19 +179,33 @@ export default function HomePage() {
       <motion.header variants={item} className="sticky top-0 z-40 bg-cream-50/80 backdrop-blur-xl border-b border-cream-200/50 px-4 py-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-sm text-espresso-500 font-medium">Good morning ☕</p>
-            <h1 className="text-xl font-bold text-espresso-900 font-display">Find your coffee</h1>
+            <p className="text-sm text-espresso-500 font-medium">{getGreeting()}</p>
+            <h1 className="text-xl font-bold text-espresso-900 font-display">
+              {session ? `Hi, ${userName.split(' ')[0]}` : "Find your coffee"}
+            </h1>
           </div>
-          <Link href="/loyalty">
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 bg-gradient-to-r from-espresso-800 to-espresso-900 text-cream-100 px-4 py-2 rounded-full shadow-lg shadow-espresso-900/20"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span className="font-semibold text-sm">{points.toLocaleString()}</span>
-            </motion.div>
-          </Link>
+          {session ? (
+            <Link href="/loyalty">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-2 bg-gradient-to-r from-espresso-800 to-espresso-900 text-cream-100 px-4 py-2 rounded-full shadow-lg shadow-espresso-900/20"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="font-semibold text-sm">
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    points.toLocaleString()
+                  )}
+                </span>
+              </motion.div>
+            </Link>
+          ) : (
+            <Link href="/login">
+              <Button size="sm">Sign In</Button>
+            </Link>
+          )}
         </div>
 
         {/* Search */}
@@ -163,7 +242,7 @@ export default function HomePage() {
             >
               <Gift className="w-6 h-6 mb-2" />
               <p className="text-xs font-medium opacity-70">Rewards</p>
-              <p className="text-sm font-bold">3 Available</p>
+              <p className="text-sm font-bold">{voucherCount} Available</p>
             </motion.div>
           </Link>
           <Link href="/profile/coffee">
@@ -180,7 +259,7 @@ export default function HomePage() {
         </motion.div>
 
         {/* Quick Reorder */}
-        {quickReorders.length > 0 && (
+        {session && quickReorders.length > 0 && (
           <motion.section variants={item}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-espresso-900 font-display">Order Again</h2>
@@ -361,4 +440,3 @@ export default function HomePage() {
     </motion.div>
   )
 }
-

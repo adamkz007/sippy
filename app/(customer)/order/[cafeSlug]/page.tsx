@@ -16,7 +16,7 @@ import {
   Gift,
   X
 } from "lucide-react"
-import { cn, formatCurrency } from "@/lib/utils"
+import { cn, formatCurrency, getCurrencyInfo } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -44,17 +44,19 @@ const mockCategories = [
 ]
 
 const mockProducts = [
-  { id: "1", name: "Flat White", description: "Double shot with silky milk", price: 5.50, category: "coffee", image: null, popular: true },
-  { id: "2", name: "Long Black", description: "Double shot over hot water", price: 4.50, category: "coffee", image: null, popular: true },
-  { id: "3", name: "Cappuccino", description: "Espresso with foamed milk", price: 5.50, category: "coffee", image: null },
-  { id: "4", name: "Latte", description: "Espresso with steamed milk", price: 5.50, category: "coffee", image: null },
-  { id: "5", name: "Oat Latte", description: "Oat milk, double shot", price: 6.50, category: "specialty", image: null, popular: true },
-  { id: "6", name: "Matcha Latte", description: "Japanese ceremonial grade", price: 7.00, category: "specialty", image: null },
-  { id: "7", name: "Cold Brew", description: "24hr slow steeped", price: 5.50, category: "cold", image: null, popular: true },
-  { id: "8", name: "Iced Latte", description: "Espresso over ice with milk", price: 6.00, category: "cold", image: null },
-  { id: "9", name: "Avocado Toast", description: "Sourdough, feta, chili", price: 16.00, category: "food", image: null },
-  { id: "10", name: "Banana Bread", description: "House-made, warm", price: 6.50, category: "food", image: null },
+  { id: "1", name: "Flat White", description: "Double shot espresso with velvety steamed milk. A perfectly balanced coffee with a smooth, creamy texture.", price: 5.50, category: "coffee", image: null, popular: true },
+  { id: "2", name: "Long Black", description: "Double shot espresso poured over hot water. Bold and aromatic with a rich crema.", price: 4.50, category: "coffee", image: null, popular: true },
+  { id: "3", name: "Cappuccino", description: "Classic Italian espresso with equal parts steamed milk and silky foam, dusted with chocolate.", price: 5.50, category: "coffee", image: null },
+  { id: "4", name: "Latte", description: "Smooth espresso with creamy steamed milk. A gentle, comforting coffee experience.", price: 5.50, category: "coffee", image: null },
+  { id: "5", name: "Oat Latte", description: "Creamy oat milk paired with our signature double shot. Naturally sweet and dairy-free.", price: 6.50, category: "specialty", image: null, popular: true },
+  { id: "6", name: "Matcha Latte", description: "Ceremonial grade Japanese matcha whisked with steamed milk. Earthy, smooth, and energizing.", price: 7.00, category: "specialty", image: null },
+  { id: "7", name: "Cold Brew", description: "24-hour slow steeped in cold water. Smooth, low acidity, naturally sweet with chocolate notes.", price: 5.50, category: "cold", image: null, popular: true },
+  { id: "8", name: "Iced Latte", description: "Espresso poured over ice with cold milk. Refreshing and perfect for warm days.", price: 6.00, category: "cold", image: null },
+  { id: "9", name: "Avocado Toast", description: "Smashed avocado on sourdough with Danish feta, cherry tomatoes, chili flakes, and a drizzle of olive oil.", price: 16.00, category: "food", image: null },
+  { id: "10", name: "Banana Bread", description: "House-made, served warm with butter. Moist, perfectly spiced with walnuts.", price: 6.50, category: "food", image: null },
 ]
+
+type Product = typeof mockProducts[0]
 
 interface CartItem {
   id: string
@@ -69,15 +71,27 @@ export default function OnlineOrderPage() {
   const [activeCategory, setActiveCategory] = useState("coffee")
   const [cart, setCart] = useState<CartItem[]>([])
   const [showCart, setShowCart] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [modalQuantity, setModalQuantity] = useState(1)
 
   const filteredProducts = mockProducts.filter(p => p.category === activeCategory)
+
+  const openProductModal = (product: Product) => {
+    setSelectedProduct(product)
+    setModalQuantity(1)
+  }
+
+  const closeProductModal = () => {
+    setSelectedProduct(null)
+    setModalQuantity(1)
+  }
   
-  const addToCart = (product: typeof mockProducts[0]) => {
+  const addToCart = (product: Product, quantity: number = 1) => {
     const existing = cart.find(item => item.productId === product.id)
     if (existing) {
       setCart(cart.map(item => 
         item.productId === product.id 
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: item.quantity + quantity }
           : item
       ))
     } else {
@@ -86,9 +100,10 @@ export default function OnlineOrderPage() {
         productId: product.id,
         name: product.name,
         price: product.price,
-        quantity: 1,
+        quantity: quantity,
       }])
     }
+    closeProductModal()
   }
 
   const updateQuantity = (itemId: string, delta: number) => {
@@ -109,7 +124,7 @@ export default function OnlineOrderPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b">
         <div className="container mx-auto px-4 h-14 flex items-center gap-4">
-          <Link href="/" className="p-2 -ml-2 rounded-lg hover:bg-muted">
+          <Link href="/home" className="p-2 -ml-2 rounded-lg hover:bg-muted">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex-1">
@@ -163,7 +178,7 @@ export default function OnlineOrderPage() {
         <div className="container mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Gift className="w-5 h-5" />
-            <span className="text-sm font-medium">Earn 1 point per $1 · Redeem at any Sippy cafe!</span>
+            <span className="text-sm font-medium">Earn 1 point per {getCurrencyInfo('MYR').symbol}1 · Redeem at any Sippy cafe!</span>
           </div>
           <Link href="/login" className="text-sm underline">Sign in</Link>
         </div>
@@ -189,35 +204,113 @@ export default function OnlineOrderPage() {
       </div>
 
       {/* Products */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid gap-4 md:grid-cols-2">
+      <div className="container mx-auto px-4 py-6 pb-32">
+        <div className="space-y-3">
           {filteredProducts.map((product) => (
             <Card 
               key={product.id} 
-              className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => addToCart(product)}
+              className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]"
+              onClick={() => openProductModal(product)}
             >
-              <CardContent className="p-4 flex gap-4">
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
                       <h3 className="font-semibold">{product.name}</h3>
                       {product.popular && (
                         <Badge variant="secondary" className="text-[10px] mt-1">Popular</Badge>
                       )}
                     </div>
-                    <p className="font-bold text-espresso-700">{formatCurrency(product.price)}</p>
+                    <p className="font-bold text-espresso-700 shrink-0">{formatCurrency(product.price)}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">{product.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{product.description}</p>
                 </div>
-                <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-espresso-100 to-latte-100 flex items-center justify-center shrink-0">
-                  <Coffee className="w-8 h-8 text-espresso-400" />
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-espresso-100 to-latte-100 flex items-center justify-center shrink-0">
+                  <Coffee className="w-7 h-7 text-espresso-400" />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       </div>
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-50">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+            onClick={closeProductModal} 
+          />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+            {/* Close Button */}
+            <button 
+              onClick={closeProductModal}
+              className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/10 flex items-center justify-center hover:bg-black/20 transition-colors"
+            >
+              <X className="w-5 h-5 text-espresso-700" />
+            </button>
+
+            {/* Product Image */}
+            <div className="relative h-56 bg-gradient-to-br from-espresso-100 via-latte-100 to-cream-100 flex items-center justify-center rounded-t-3xl shrink-0">
+              <div className="w-32 h-32 rounded-full bg-white/40 flex items-center justify-center shadow-lg">
+                <Coffee className="w-16 h-16 text-espresso-500" />
+              </div>
+              {selectedProduct.popular && (
+                <Badge className="absolute top-4 left-4 bg-amber-500 text-white">
+                  <Star className="w-3 h-3 mr-1 fill-current" />
+                  Popular
+                </Badge>
+              )}
+            </div>
+
+            {/* Product Info */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <h2 className="text-2xl font-bold text-espresso-900 font-display">
+                  {selectedProduct.name}
+                </h2>
+                <p className="text-xl font-bold text-espresso-700 shrink-0">
+                  {formatCurrency(selectedProduct.price)}
+                </p>
+              </div>
+              
+              <p className="text-espresso-600 leading-relaxed">
+                {selectedProduct.description}
+              </p>
+
+              {/* Quantity Selector */}
+              <div className="mt-6 flex items-center justify-center gap-6">
+                <button
+                  onClick={() => setModalQuantity(Math.max(1, modalQuantity - 1))}
+                  className="w-12 h-12 rounded-full border-2 border-espresso-200 flex items-center justify-center hover:bg-espresso-50 transition-colors disabled:opacity-50"
+                  disabled={modalQuantity <= 1}
+                >
+                  <Minus className="w-5 h-5 text-espresso-700" />
+                </button>
+                <span className="text-2xl font-bold text-espresso-900 w-8 text-center">
+                  {modalQuantity}
+                </span>
+                <button
+                  onClick={() => setModalQuantity(modalQuantity + 1)}
+                  className="w-12 h-12 rounded-full border-2 border-espresso-200 flex items-center justify-center hover:bg-espresso-50 transition-colors"
+                >
+                  <Plus className="w-5 h-5 text-espresso-700" />
+                </button>
+              </div>
+            </div>
+
+            {/* Add to Cart Button */}
+            <div className="p-4 border-t border-cream-200 bg-white shrink-0 pb-safe">
+              <Button 
+                onClick={() => addToCart(selectedProduct, modalQuantity)}
+                className="w-full h-14 text-lg font-semibold bg-espresso-900 hover:bg-espresso-800 text-white rounded-2xl shadow-lg"
+              >
+                Add to Cart · {formatCurrency(selectedProduct.price * modalQuantity)}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cart Drawer */}
       {showCart && (
@@ -301,9 +394,9 @@ export default function OnlineOrderPage() {
         </div>
       )}
 
-      {/* Floating Cart Button (Mobile) */}
+      {/* Floating Cart Button (Mobile) - positioned above bottom nav */}
       {cartCount > 0 && !showCart && (
-        <div className="fixed bottom-4 left-4 right-4 md:hidden">
+        <div className="fixed bottom-24 left-4 right-4 md:hidden z-40">
           <Button 
             className="w-full h-14 text-lg shadow-lg"
             onClick={() => setShowCart(true)}
