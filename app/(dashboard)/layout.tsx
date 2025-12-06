@@ -30,7 +30,7 @@ const navigation = [
   { name: "Orders", href: "/orders", icon: UtensilsCrossed },
   { name: "Menu", href: "/menu", icon: Coffee },
   { name: "Customers", href: "/customers", icon: Users },
-  { name: "Loyalty", href: "/loyalty", icon: Gift },
+  { name: "Loyalty", href: "/dashboard/loyalty", icon: Gift },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },
 ]
