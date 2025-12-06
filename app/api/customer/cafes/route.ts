@@ -5,6 +5,21 @@ import { prisma } from "@/lib/prisma"
 
 export const dynamic = 'force-dynamic'
 
+const DEMO_CAFE = {
+  id: "demo-cafe",
+  name: "The Daily Grind (Demo)",
+  slug: "daily-grind",
+  description: "Your neighborhood specialty coffee shop serving artisan coffee and fresh pastries",
+  image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800",
+  address: "168 Jalan Bukit Bintang, Bukit Bintang, 55100 Kuala Lumpur",
+  city: "Kuala Lumpur",
+  latitude: 3.1478,
+  longitude: 101.7108,
+  phone: "+60 3 2345 6789",
+  timezone: "Asia/Kuala_Lumpur",
+  pointsPerDollar: 1,
+}
+
 // Haversine formula to calculate distance between two points
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371 // Earth's radius in kilometers
@@ -41,7 +56,8 @@ export async function GET(req: Request) {
     // Build where clause - only show cafes with addresses
     const where: any = { 
       isActive: true,
-      address: { not: null },
+      // address is non-nullable in schema; filter out empty strings instead of null
+      address: { not: "" },
     }
 
     if (query) {
@@ -128,6 +144,35 @@ export async function GET(req: Request) {
       enrichedCafes = enrichedCafes.filter(cafe => 
         cafe.distanceKm !== null && cafe.distanceKm <= maxDistance
       )
+    }
+
+    // If we have no cafes (demo environment), return the demo cafe so UI still has data
+    if (enrichedCafes.length === 0) {
+      let distance: number | null = null
+      let distanceText = "Demo cafe"
+
+      if (userLat !== null && userLng !== null) {
+        distance = calculateDistance(userLat, userLng, DEMO_CAFE.latitude, DEMO_CAFE.longitude)
+        distanceText = formatDistance(distance)
+      }
+
+      enrichedCafes = [
+        {
+          ...DEMO_CAFE,
+          distance,
+          distanceKm: distance,
+          distance: distanceText,
+          rating: 4.7,
+          reviewCount: 240,
+          prepTime: "8-12 min",
+          isOpen: true,
+          closesAt: "6:00 PM",
+          priceRange: "$$",
+          tags: ["Specialty", "Single Origin"],
+          features: ["wifi", "card"],
+          stats: { totalOrders: 420, menuItems: 24 },
+        },
+      ]
     }
 
     // Sort by distance if user location is available, otherwise by popularity

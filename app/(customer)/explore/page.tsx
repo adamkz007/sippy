@@ -79,7 +79,9 @@ export default function ExplorePage() {
     const fetchCafes = async () => {
       setLoading(true)
       try {
-        const params = new URLSearchParams({ limit: "50" })
+        // If we don't have location (either not granted or denied), fetch a larger list so users still see all cafes
+        const limit = latitude && longitude ? "50" : "100"
+        const params = new URLSearchParams({ limit })
         if (latitude && longitude) {
           params.append("lat", latitude.toString())
           params.append("lng", longitude.toString())
@@ -102,7 +104,7 @@ export default function ExplorePage() {
 
     const debounceTimer = setTimeout(fetchCafes, 300)
     return () => clearTimeout(debounceTimer)
-  }, [latitude, longitude, searchQuery])
+  }, [latitude, longitude, permissionState, searchQuery])
 
   const toggleFilter = (filterId: string) => {
     if (filterId === "nearby" && !latitude) {
@@ -117,7 +119,8 @@ export default function ExplorePage() {
   }
 
   const filteredCafes = cafes.filter(cafe => {
-    if (activeFilters.includes("open") && !cafe.isOpen) {
+    const isOpen = cafe.isOpen ?? true
+    if (activeFilters.includes("open") && !isOpen) {
       return false
     }
     return true

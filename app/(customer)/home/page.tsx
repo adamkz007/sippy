@@ -357,7 +357,7 @@ export default function HomePage() {
           )}
 
           {/* Cafes List */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             {cafesLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-espresso-400" />
@@ -372,7 +372,7 @@ export default function HomePage() {
               </Card>
             ) : (
               cafes.map((cafe, index) => (
-                <Link key={cafe.id} href={`/order/${cafe.slug}`}>
+                <Link key={cafe.id} href={`/order/${cafe.slug}`} className="block">
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
