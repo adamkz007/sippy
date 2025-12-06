@@ -92,12 +92,15 @@ model Cafe {
   slug        String   @unique
   description String?
   image       String?
-  address     String?
+  address     String   // Required: Full address from Google Places
   city        String?
   country     String   @default("AU")
+  latitude    Float?   // Latitude coordinate for geolocation
+  longitude   Float?   // Longitude coordinate for geolocation
+  placeId     String?  // Google Place ID for reference
   phone       String?
   email       String?
-  timezone    String   @default("Australia/Sydney")
+  timezone    String   @default("Asia/Kuala_Lumpur")
   currency    String   @default("MYR")
   taxRate     Float    @default(0.10)
   isActive    Boolean  @default(true)

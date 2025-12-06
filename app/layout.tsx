@@ -9,10 +9,11 @@ const workSans = Work_Sans({
   variable: "--font-work-sans",
 })
 
-// Using Outfit as a geometric sans alternative to Scandia (which is not on Google Fonts)
-const scandia = Outfit({
+// Outfit ExtraBold for headings
+const outfitHeading = Outfit({
+  weight: "800",
   subsets: ["latin"],
-  variable: "--font-scandia",
+  variable: "--font-outfit-heading",
 })
 
 export const metadata: Metadata = {
@@ -30,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${workSans.variable} ${scandia.variable} font-sans antialiased`}>
+      <body className={`${workSans.variable} ${outfitHeading.variable} font-sans antialiased`}>
         <Providers>
           {children}
           <Toaster />

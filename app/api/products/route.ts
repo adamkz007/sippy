@@ -10,15 +10,15 @@ const createProductSchema = z.object({
   cafeId: z.string(),
   categoryId: z.string(),
   name: z.string().min(1),
-  description: z.string().optional(),
-  image: z.string().optional(),
+  description: z.string().optional().nullable(),
+  image: z.string().optional().nullable(),
   price: z.number().positive(),
-  cost: z.number().optional(),
+  cost: z.number().optional().nullable(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().default(true),
   isPopular: z.boolean().default(false),
-  roastLevel: z.enum(["LIGHT", "MEDIUM_LIGHT", "MEDIUM", "MEDIUM_DARK", "DARK"]).optional(),
-  origin: z.string().optional(),
+  roastLevel: z.enum(["LIGHT", "MEDIUM_LIGHT", "MEDIUM", "MEDIUM_DARK", "DARK"]).optional().nullable(),
+  origin: z.string().optional().nullable(),
   flavorNotes: z.array(z.string()).default([]),
 })
 
@@ -113,7 +113,8 @@ export async function POST(req: Request) {
     return NextResponse.json(product)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      const errorMessage = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      return NextResponse.json({ error: errorMessage }, { status: 400 })
     }
     console.error("Product creation error:", error)
     return NextResponse.json(
@@ -149,7 +150,8 @@ export async function PATCH(req: Request) {
     return NextResponse.json(product)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      const errorMessage = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      return NextResponse.json({ error: errorMessage }, { status: 400 })
     }
     console.error("Product update error:", error)
     return NextResponse.json(

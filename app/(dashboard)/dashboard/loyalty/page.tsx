@@ -1,14 +1,15 @@
 "use client"
 
+import { useState, useEffect, useCallback } from "react"
+import { useSession } from "next-auth/react"
 import { 
   Gift, 
   TrendingUp, 
-  Users,
   Ticket,
   Star,
-  ArrowRight,
   Sparkles,
-  Coffee
+  Coffee,
+  Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -16,28 +17,27 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { formatPoints } from "@/lib/utils"
 import { useCurrency } from "@/components/currency-context"
 
-// Mock data
-const stats = {
-  totalPointsIssued: 125000,
-  totalPointsRedeemed: 45000,
-  activeVouchers: 234,
-  crossCafeRedemptions: 12,
+interface LoyaltyStats {
+  totalPointsIssued: number
+  totalPointsRedeemed: number
+  activeVouchers: number
+  crossCafeRedemptions: number
+}
+
+interface Redemption {
+  customer: string
+  points: number
+  description: string
+  time: string
 }
 
 // Voucher catalog with values for dynamic formatting
 const voucherCatalogData = [
-  { id: "1", name: "Free Coffee", pointsCost: 500, value: 5.50, descKey: "free_coffee", claimedCount: 89 },
-  { id: "2", nameKey: "5_off", pointsCost: 400, value: 5, descKey: "5_off_desc", claimedCount: 156 },
-  { id: "3", nameKey: "10_off", pointsCost: 750, value: 10, descKey: "10_off_desc", claimedCount: 45 },
-  { id: "4", name: "15% Off", pointsCost: 600, value: 15, descKey: "percent_off", claimedCount: 67 },
-  { id: "5", name: "Free Upgrade", pointsCost: 200, value: 1, descKey: "upgrade", claimedCount: 234 },
-]
-
-const recentRedemptionsData = [
-  { customer: "Alex S.", voucherKey: "free_coffee", cafe: "Your Cafe", pointsUsed: 500, time: "2 hours ago" },
-  { customer: "Maya K.", voucherKey: "10_off", cafe: "Bean & Gone", pointsUsed: 750, time: "Yesterday", crossCafe: true },
-  { customer: "Jordan T.", voucherKey: "upgrade", cafe: "Your Cafe", pointsUsed: 200, time: "Yesterday" },
-  { customer: "Sam L.", voucherKey: "5_off", cafe: "Your Cafe", pointsUsed: 400, time: "2 days ago" },
+  { id: "1", name: "Free Coffee", pointsCost: 500, value: 5.50, descKey: "free_coffee" },
+  { id: "2", nameKey: "5_off", pointsCost: 400, value: 5, descKey: "5_off_desc" },
+  { id: "3", nameKey: "10_off", pointsCost: 750, value: 10, descKey: "10_off_desc" },
+  { id: "4", name: "15% Off", pointsCost: 600, value: 15, descKey: "percent_off" },
+  { id: "5", name: "Free Upgrade", pointsCost: 200, value: 1, descKey: "upgrade" },
 ]
 
 // Function to get voucher name with currency
@@ -63,30 +63,90 @@ const getVoucherDesc = (key: string, formatCurrency: (n: number) => string) => {
   }
 }
 
-// Function to get tier benefits with currency
-const getTierBenefits = (currencySymbol: string) => [
-  { tier: "BRONZE", minPoints: 0, benefits: [`1 point per ${currencySymbol}1`, "Birthday reward"] },
-  { tier: "SILVER", minPoints: 1000, benefits: [`1.25 points per ${currencySymbol}1`, "Free upgrade/month", "Early access"] },
-  { tier: "GOLD", minPoints: 5000, benefits: [`1.5 points per ${currencySymbol}1`, "Free coffee/month", "Priority queue"] },
-  { tier: "PLATINUM", minPoints: 15000, benefits: [`2 points per ${currencySymbol}1`, "Free coffee/week", "VIP events"] },
-]
-
 export default function LoyaltyPage() {
-  const { formatCurrency, currencySymbol } = useCurrency()
+  const { data: session, status: sessionStatus } = useSession()
+  const { formatCurrency } = useCurrency()
   
-  // Build dynamic data with currency
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<LoyaltyStats>({
+    totalPointsIssued: 0,
+    totalPointsRedeemed: 0,
+    activeVouchers: 0,
+    crossCafeRedemptions: 0,
+  })
+  const [recentRedemptions, setRecentRedemptions] = useState<Redemption[]>([])
+
+  // Get cafeId from session
+  const staffProfiles = (session?.user as any)?.staffProfiles || []
+  const cafeId = staffProfiles[0]?.cafeId || ""
+
+  const fetchLoyaltyData = useCallback(async () => {
+    if (!cafeId) return
+    
+    try {
+      const res = await fetch(`/api/dashboard/loyalty?cafeId=${cafeId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setStats(data.stats)
+        setRecentRedemptions(data.recentRedemptions)
+      }
+    } catch (error) {
+      console.error("Failed to fetch loyalty data:", error)
+    }
+    setLoading(false)
+  }, [cafeId])
+
+  useEffect(() => {
+    if (sessionStatus === "loading") return
+    
+    if (cafeId) {
+      fetchLoyaltyData()
+    } else {
+      setLoading(false)
+    }
+  }, [cafeId, sessionStatus, fetchLoyaltyData])
+
+  // Build dynamic voucher catalog with currency
   const voucherCatalog = voucherCatalogData.map(v => ({
     ...v,
     name: v.nameKey ? getVoucherName(v.nameKey, formatCurrency) : v.name,
     description: getVoucherDesc(v.descKey, formatCurrency),
   }))
 
-  const recentRedemptions = recentRedemptionsData.map(r => ({
-    ...r,
-    voucher: getVoucherName(r.voucherKey, formatCurrency),
-  }))
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const hours = Math.floor((Date.now() - date.getTime()) / 3600000)
+    if (hours < 1) return "Just now"
+    if (hours === 1) return "1 hour ago"
+    if (hours < 24) return `${hours} hours ago`
+    const days = Math.floor(hours / 24)
+    if (days === 1) return "Yesterday"
+    return `${days} days ago`
+  }
 
-  const tierBenefits = getTierBenefits(currencySymbol)
+  if (loading || sessionStatus === "loading") {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-espresso-600" />
+      </div>
+    )
+  }
+
+  if (!cafeId) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <Coffee className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-lg font-semibold mb-2">No Cafe Found</h2>
+            <p className="text-muted-foreground">
+              You need to be associated with a cafe to view loyalty data.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -98,7 +158,7 @@ export default function LoyaltyPage() {
         </div>
         <Button>
           <Gift className="w-4 h-4 mr-2" />
-          Create Promotion
+          Create Promotion (soon!)
         </Button>
       </div>
 
@@ -173,7 +233,6 @@ export default function LoyaltyPage() {
                   </div>
                   <div className="text-right">
                     <Badge variant="secondary">{formatPoints(voucher.pointsCost)} pts</Badge>
-                    <p className="text-xs text-muted-foreground mt-1">{voucher.claimedCount} claimed</p>
                   </div>
                 </div>
               ))}
@@ -188,79 +247,38 @@ export default function LoyaltyPage() {
             <CardDescription>Latest voucher uses at your cafe</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentRedemptions.map((redemption, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                      <Coffee className="w-5 h-5 text-muted-foreground" />
+            {recentRedemptions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Gift className="w-8 h-8 mx-auto mb-2" />
+                <p>No redemptions yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentRedemptions.map((redemption, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                        <Coffee className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          {redemption.customer}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {redemption.description} · {formatTimeAgo(redemption.time)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">
-                        {redemption.customer} used {redemption.voucher}
-                        {redemption.crossCafe && (
-                          <Badge variant="outline" className="ml-2 text-[10px]">
-                            <Sparkles className="w-3 h-3 mr-1" />
-                            Network
-                          </Badge>
-                        )}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {redemption.cafe} · {redemption.time}
-                      </p>
-                    </div>
+                    <p className="text-sm font-medium text-red-600">
+                      -{formatPoints(redemption.points)} pts
+                    </p>
                   </div>
-                  <p className="text-sm font-medium text-red-600">
-                    -{formatPoints(redemption.pointsUsed)} pts
-                  </p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tier Benefits */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Tier Benefits</CardTitle>
-            <CardDescription>Rewards for your most loyal customers</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-4 gap-4">
-              {tierBenefits.map((tier) => (
-                <div 
-                  key={tier.tier}
-                  className={`p-4 rounded-xl border-2 ${
-                    tier.tier === "PLATINUM" ? "border-violet-300 bg-violet-50" :
-                    tier.tier === "GOLD" ? "border-amber-300 bg-amber-50" :
-                    tier.tier === "SILVER" ? "border-slate-300 bg-slate-50" :
-                    "border-orange-300 bg-orange-50"
-                  }`}
-                >
-                  <Badge 
-                    variant={tier.tier.toLowerCase() as any}
-                    className="mb-3"
-                  >
-                    {tier.tier}
-                  </Badge>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {tier.minPoints === 0 ? "Starting tier" : `${formatPoints(tier.minPoints)}+ pts`}
-                  </p>
-                  <ul className="space-y-1">
-                    {tier.benefits.map((benefit, i) => (
-                      <li key={i} className="text-sm flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-current" />
-                        {benefit}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
     </div>
   )
 }
-

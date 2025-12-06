@@ -16,13 +16,16 @@ import {
   TrendingUp,
   Navigation,
   Heart,
-  Loader2
+  Loader2,
+  LocateFixed,
+  AlertCircle
 } from "lucide-react"
 import { cn, formatCurrency } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useGeolocation } from "@/lib/hooks/use-geolocation"
 
 interface CustomerProfile {
   id: string
@@ -41,57 +44,24 @@ interface CustomerProfile {
   }
 }
 
-interface Cafe {
+interface CafeData {
   id: string
   name: string
   slug: string
   image: string | null
   address: string | null
   city: string | null
+  latitude: number | null
+  longitude: number | null
+  rating: number
+  reviewCount: number
+  distance: string
+  distanceKm: number | null
+  prepTime: string
+  isOpen: boolean
+  tags: string[]
+  features: string[]
 }
-
-// Static cafe data with computed fields
-const featuredCafes = [
-  {
-    id: "1",
-    name: "The Daily Grind",
-    slug: "daily-grind",
-    image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400",
-    rating: 4.8,
-    reviews: 234,
-    distance: "0.3 km",
-    prepTime: "5-10 min",
-    tags: ["Specialty", "Single Origin"],
-    isOpen: true,
-    isFavorite: true,
-  },
-  {
-    id: "2",
-    name: "Brew Lab",
-    slug: "brew-lab",
-    image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400",
-    rating: 4.9,
-    reviews: 456,
-    distance: "0.5 km",
-    prepTime: "8-12 min",
-    tags: ["Pour Over", "Light Roast"],
-    isOpen: true,
-    isFavorite: false,
-  },
-  {
-    id: "3",
-    name: "Coffee Collective",
-    slug: "coffee-collective",
-    image: "https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=400",
-    rating: 4.7,
-    reviews: 189,
-    distance: "0.8 km",
-    prepTime: "5-8 min",
-    tags: ["Espresso", "Cozy"],
-    isOpen: true,
-    isFavorite: true,
-  },
-]
 
 const quickReorders = [
   {
@@ -139,7 +109,20 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [cafes, setCafes] = useState<CafeData[]>([])
+  const [cafesLoading, setCafesLoading] = useState(true)
+  
+  const { 
+    latitude, 
+    longitude, 
+    loading: locationLoading, 
+    error: locationError,
+    requestLocation,
+    permissionState,
+    isSupported 
+  } = useGeolocation()
 
+  // Fetch profile
   useEffect(() => {
     const fetchProfile = async () => {
       if (sessionStatus === "loading") return
@@ -163,6 +146,32 @@ export default function HomePage() {
 
     fetchProfile()
   }, [session, sessionStatus])
+
+  // Fetch nearby cafes
+  useEffect(() => {
+    const fetchCafes = async () => {
+      setCafesLoading(true)
+      try {
+        const params = new URLSearchParams({ limit: "5" })
+        if (latitude && longitude) {
+          params.append("lat", latitude.toString())
+          params.append("lng", longitude.toString())
+        }
+        
+        const res = await fetch(`/api/customer/cafes?${params}`)
+        if (res.ok) {
+          const data = await res.json()
+          setCafes(data.cafes || [])
+        }
+      } catch (err) {
+        console.error("Error fetching cafes:", err)
+      } finally {
+        setCafesLoading(false)
+      }
+    }
+
+    fetchCafes()
+  }, [latitude, longitude])
 
   const points = profile?.loyalty?.pointsBalance || 0
   const voucherCount = profile?.vouchers?.length || 0
@@ -305,88 +314,133 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <Navigation className="w-4 h-4 text-espresso-600" />
               <h2 className="text-lg font-bold text-espresso-900 font-display">Nearby</h2>
+              {locationLoading && <Loader2 className="w-3 h-3 animate-spin text-espresso-400" />}
             </div>
             <Link href="/explore" className="text-sm text-espresso-600 font-medium flex items-center">
               View map <ChevronRight className="w-4 h-4 ml-1" />
             </Link>
           </div>
-          <div className="space-y-3">
-            {featuredCafes.map((cafe, index) => (
-              <Link key={cafe.id} href={`/order/${cafe.slug}`}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
+          
+          {/* Location Permission Banner */}
+          {isSupported && permissionState !== "granted" && !latitude && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="mb-3 p-3 rounded-xl bg-gradient-to-r from-espresso-50 to-cream-100 border border-cream-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-espresso-100 flex items-center justify-center shrink-0">
+                  <LocateFixed className="w-5 h-5 text-espresso-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-espresso-900">Enable location</p>
+                  <p className="text-xs text-espresso-600">See cafes sorted by distance from you</p>
+                </div>
+                <Button 
+                  size="sm" 
+                  onClick={requestLocation}
+                  disabled={locationLoading}
+                  className="shrink-0"
                 >
-                  <Card className="overflow-hidden border-cream-200/50 shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-0">
-                      <div className="flex gap-4">
-                        {/* Cafe Image */}
-                        <div className="relative w-28 h-28 shrink-0">
-                          <div 
-                            className="absolute inset-0 bg-cover bg-center rounded-l-lg"
-                            style={{ backgroundImage: `url(${cafe.image})` }}
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/20 rounded-l-lg" />
-                          {cafe.isFavorite && (
-                            <div className="absolute top-2 left-2 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center">
-                              <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-                            </div>
-                          )}
-                        </div>
+                  {locationLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Allow"}
+                </Button>
+              </div>
+              {locationError && (
+                <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {locationError}
+                </p>
+              )}
+            </motion.div>
+          )}
 
-                        {/* Cafe Info */}
-                        <div className="flex-1 py-3 pr-3">
-                          <div className="flex items-start justify-between mb-1">
-                            <h3 className="font-semibold text-espresso-900">{cafe.name}</h3>
-                            <div className="flex items-center gap-1 bg-cream-100 px-2 py-0.5 rounded-full">
-                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                              <span className="text-xs font-semibold text-espresso-800">{cafe.rating}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-3 text-xs text-espresso-500 mb-2">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3.5 h-3.5" />
-                              {cafe.distance}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5" />
-                              {cafe.prepTime}
-                            </span>
+          {/* Cafes List */}
+          <div className="space-y-3">
+            {cafesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-espresso-400" />
+              </div>
+            ) : cafes.length === 0 ? (
+              <Card className="border-cream-200/50">
+                <CardContent className="p-6 text-center">
+                  <Coffee className="w-10 h-10 text-espresso-300 mx-auto mb-3" />
+                  <p className="text-sm text-espresso-600">No cafes found nearby</p>
+                  <p className="text-xs text-espresso-400 mt-1">Check back later or expand your search</p>
+                </CardContent>
+              </Card>
+            ) : (
+              cafes.map((cafe, index) => (
+                <Link key={cafe.id} href={`/order/${cafe.slug}`}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <Card className="overflow-hidden border-cream-200/50 shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-0">
+                        <div className="flex gap-4">
+                          {/* Cafe Image */}
+                          <div className="relative w-28 h-28 shrink-0">
+                            <div 
+                              className="absolute inset-0 bg-cover bg-center rounded-l-lg"
+                              style={{ backgroundImage: `url(${cafe.image || "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400"})` }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/20 rounded-l-lg" />
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            <Badge 
-                              variant={cafe.isOpen ? "default" : "secondary"}
-                              className={cn(
-                                "text-[10px] px-2",
-                                cafe.isOpen 
-                                  ? "bg-green-100 text-green-700 hover:bg-green-100" 
-                                  : "bg-gray-100 text-gray-600"
-                              )}
-                            >
-                              {cafe.isOpen ? "Open" : "Closed"}
-                            </Badge>
-                            {cafe.tags.slice(0, 2).map((tag) => (
+                          {/* Cafe Info */}
+                          <div className="flex-1 py-3 pr-3">
+                            <div className="flex items-start justify-between mb-1">
+                              <h3 className="font-semibold text-espresso-900">{cafe.name}</h3>
+                              <div className="flex items-center gap-1 bg-cream-100 px-2 py-0.5 rounded-full">
+                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                <span className="text-xs font-semibold text-espresso-800">{cafe.rating.toFixed(1)}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 text-xs text-espresso-500 mb-2">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3.5 h-3.5" />
+                                {cafe.distance}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5" />
+                                {cafe.prepTime}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
                               <Badge 
-                                key={tag} 
-                                variant="outline" 
-                                className="text-[10px] border-cream-300 text-espresso-600"
+                                variant={cafe.isOpen ? "default" : "secondary"}
+                                className={cn(
+                                  "text-[10px] px-2",
+                                  cafe.isOpen 
+                                    ? "bg-green-100 text-green-700 hover:bg-green-100" 
+                                    : "bg-gray-100 text-gray-600"
+                                )}
                               >
-                                {tag}
+                                {cafe.isOpen ? "Open" : "Closed"}
                               </Badge>
-                            ))}
+                              {cafe.tags.slice(0, 2).map((tag) => (
+                                <Badge 
+                                  key={tag} 
+                                  variant="outline" 
+                                  className="text-[10px] border-cream-300 text-espresso-600"
+                                >
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </Link>
-            ))}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </Link>
+              ))
+            )}
           </div>
         </motion.section>
 

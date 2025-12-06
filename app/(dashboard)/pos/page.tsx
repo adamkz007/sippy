@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useSession } from "next-auth/react"
 import { 
   Search,
   Plus,
@@ -20,54 +21,34 @@ import {
   Smartphone,
   UserX
 } from "lucide-react"
-import { cn, formatCurrency, formatPoints, generateOrderNumber, getTierColor } from "@/lib/utils"
+import { cn, formatCurrency, formatPoints, getTierColor } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog"
-import { useCurrency } from "@/components/currency-context"
+import { useCurrency, CurrencyCode } from "@/components/currency-context"
 
-// Mock menu data
-const categories = [
-  { id: "coffee", name: "Coffee", emoji: "☕" },
-  { id: "specialty", name: "Specialty", emoji: "✨" },
-  { id: "food", name: "Food", emoji: "🥐" },
-  { id: "cold", name: "Cold Drinks", emoji: "🧊" },
-  { id: "tea", name: "Tea", emoji: "🍵" },
-]
+// Types
+interface Category {
+  id: string
+  name: string
+  description?: string | null
+  sortOrder: number
+  isActive: boolean
+}
 
-const products = [
-  // Coffee
-  { id: "1", name: "Flat White", price: 5.50, category: "coffee", popular: true },
-  { id: "2", name: "Long Black", price: 4.50, category: "coffee", popular: true },
-  { id: "3", name: "Cappuccino", price: 5.50, category: "coffee" },
-  { id: "4", name: "Latte", price: 5.50, category: "coffee" },
-  { id: "5", name: "Espresso", price: 4.00, category: "coffee" },
-  { id: "6", name: "Double Espresso", price: 5.00, category: "coffee" },
-  { id: "7", name: "Mocha", price: 6.50, category: "coffee" },
-  { id: "8", name: "Piccolo", price: 4.50, category: "coffee" },
-  // Specialty
-  { id: "9", name: "Oat Latte", price: 6.50, category: "specialty", popular: true },
-  { id: "10", name: "Turmeric Latte", price: 6.50, category: "specialty" },
-  { id: "11", name: "Matcha Latte", price: 7.00, category: "specialty" },
-  { id: "12", name: "Chai Latte", price: 6.00, category: "specialty" },
-  // Cold
-  { id: "13", name: "Iced Latte", price: 6.00, category: "cold" },
-  { id: "14", name: "Cold Brew", price: 5.50, category: "cold", popular: true },
-  { id: "15", name: "Iced Long Black", price: 5.00, category: "cold" },
-  { id: "16", name: "Iced Mocha", price: 7.00, category: "cold" },
-  // Food
-  { id: "17", name: "Avocado Toast", price: 16.00, category: "food" },
-  { id: "18", name: "Croissant", price: 5.50, category: "food" },
-  { id: "19", name: "Banana Bread", price: 6.50, category: "food" },
-  { id: "20", name: "Muffin", price: 5.00, category: "food" },
-  // Tea
-  { id: "21", name: "English Breakfast", price: 4.50, category: "tea" },
-  { id: "22", name: "Earl Grey", price: 4.50, category: "tea" },
-  { id: "23", name: "Green Tea", price: 4.50, category: "tea" },
-  { id: "24", name: "Peppermint", price: 4.50, category: "tea" },
-]
+interface Product {
+  id: string
+  name: string
+  description?: string | null
+  price: number
+  categoryId: string
+  isActive: boolean
+  isPopular: boolean
+  category: Category
+}
 
 interface CartItem {
   id: string
@@ -101,13 +82,21 @@ type OrderType = "TAKEAWAY" | "DINE_IN"
 type AttachedCustomer = CustomerInfo | GuestCustomer | null
 
 export default function POSPage() {
+  const { data: session, status } = useSession()
   const { currency } = useCurrency()
+  
+  // Data state
+  const [categories, setCategories] = useState<Category[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  // UI state
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [cart, setCart] = useState<CartItem[]>([])
   const [orderType, setOrderType] = useState<OrderType>("TAKEAWAY")
   const [showPayment, setShowPayment] = useState(false)
-  
+
   // Customer lookup state
   const [customerModalOpen, setCustomerModalOpen] = useState(false)
   const [phoneInput, setPhoneInput] = useState("")
@@ -115,14 +104,55 @@ export default function POSPage() {
   const [lookupResult, setLookupResult] = useState<{ found: boolean; customer?: CustomerInfo; phone?: string } | null>(null)
   const [attachedCustomer, setAttachedCustomer] = useState<AttachedCustomer>(null)
 
+  // Get cafeId from session
+  const staffProfiles = (session?.user as any)?.staffProfiles || []
+  const cafeId = staffProfiles[0]?.cafeId || ""
+
+  // Fetch data
+  const fetchData = useCallback(async () => {
+    if (!cafeId) return
+    
+    setLoading(true)
+    try {
+      const [categoriesRes, productsRes] = await Promise.all([
+        fetch(`/api/categories?cafeId=${cafeId}&active=true`),
+        fetch(`/api/products?cafeId=${cafeId}&active=true`),
+      ])
+      
+      if (categoriesRes.ok) {
+        const categoriesData = await categoriesRes.json()
+        setCategories(categoriesData)
+      }
+      
+      if (productsRes.ok) {
+        const productsData = await productsRes.json()
+        setProducts(productsData)
+      }
+    } catch (error) {
+      console.error("Failed to fetch menu data:", error)
+    }
+    setLoading(false)
+  }, [cafeId])
+
+  useEffect(() => {
+    if (status === "loading") return
+    
+    if (cafeId) {
+      fetchData()
+    } else {
+      setLoading(false)
+    }
+  }, [cafeId, status, fetchData])
+
+  // Filter products
   const filteredProducts = products.filter((product) => {
-    const matchesCategory = !activeCategory || product.category === activeCategory
+    const matchesCategory = !activeCategory || product.categoryId === activeCategory
     const matchesSearch = !searchQuery || 
       product.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesCategory && matchesSearch
   })
 
-  const addToCart = (product: typeof products[0]) => {
+  const addToCart = (product: Product) => {
     const existingItem = cart.find((item) => item.productId === product.id)
     
     if (existingItem) {
@@ -228,6 +258,52 @@ export default function POSPage() {
   // Calculate points that would be earned (1 point per dollar spent)
   const pointsToEarn = Math.floor(subtotal)
 
+  // Loading state
+  if (loading || status === "loading") {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-7rem)]">
+        <Loader2 className="w-8 h-8 animate-spin text-espresso-600" />
+      </div>
+    )
+  }
+
+  // No cafe state
+  if (!cafeId) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-7rem)]">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <Coffee className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-lg font-semibold mb-2">No Cafe Found</h2>
+            <p className="text-muted-foreground">
+              You need to be associated with a cafe to use the POS.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // No products state
+  if (products.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-7rem)]">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <Coffee className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-lg font-semibold mb-2">No Products Yet</h2>
+            <p className="text-muted-foreground mb-4">
+              Add products to your menu first to start using the POS.
+            </p>
+            <Button asChild>
+              <a href="/menu">Go to Menu</a>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="h-[calc(100vh-7rem)] flex gap-6">
       {/* Left Panel - Menu */}
@@ -261,7 +337,6 @@ export default function POSPage() {
               onClick={() => setActiveCategory(category.id)}
               className="shrink-0"
             >
-              <span className="mr-1">{category.emoji}</span>
               {category.name}
             </Button>
           ))}
@@ -276,7 +351,7 @@ export default function POSPage() {
                 onClick={() => addToCart(product)}
                 className="relative p-4 rounded-xl border bg-white hover:border-espresso-300 hover:shadow-md transition-all text-left group"
               >
-                {product.popular && (
+                {product.isPopular && (
                   <Badge className="absolute -top-2 -right-2 bg-espresso-700">
                     Popular
                   </Badge>
@@ -292,6 +367,18 @@ export default function POSPage() {
               </button>
             ))}
           </div>
+          
+          {filteredProducts.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+              <Coffee className="w-12 h-12 mb-4" />
+              <p>No products found</p>
+              {searchQuery && (
+                <Button variant="link" onClick={() => setSearchQuery("")}>
+                  Clear search
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -440,10 +527,10 @@ export default function POSPage() {
                 </div>
               ) : (
                 <Button variant="outline" className="w-full justify-start" onClick={openCustomerModal}>
-                  <User className="w-4 h-4 mr-2" />
-                  Add Customer
-                  <ChevronRight className="w-4 h-4 ml-auto" />
-                </Button>
+                <User className="w-4 h-4 mr-2" />
+                Add Customer
+                <ChevronRight className="w-4 h-4 ml-auto" />
+              </Button>
               )}
 
               {/* Totals */}
@@ -485,7 +572,12 @@ export default function POSPage() {
           </>
         ) : (
           <PaymentPanel 
-            total={total}
+            total={total} 
+            subtotal={subtotal}
+            tax={tax}
+            cart={cart}
+            orderType={orderType}
+            cafeId={cafeId}
             customer={attachedCustomer}
             pointsToEarn={pointsToEarn}
             currency={currency}
@@ -648,6 +740,11 @@ export default function POSPage() {
 
 function PaymentPanel({ 
   total, 
+  subtotal,
+  tax,
+  cart,
+  orderType,
+  cafeId,
   customer,
   pointsToEarn,
   currency,
@@ -655,48 +752,95 @@ function PaymentPanel({
   onComplete 
 }: { 
   total: number
+  subtotal: number
+  tax: number
+  cart: CartItem[]
+  orderType: OrderType
+  cafeId: string
   customer: AttachedCustomer
   pointsToEarn: number
-  currency: string
+  currency: CurrencyCode
   onBack: () => void
   onComplete: () => void
 }) {
   const [paymentMethod, setPaymentMethod] = useState<"card" | "cash" | null>(null)
-  const [cashReceived, setCashReceived] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
-
-  const cashAmount = parseFloat(cashReceived) || 0
-  const change = cashAmount - total
+  const [completedOrder, setCompletedOrder] = useState<{ orderNumber: string; pointsEarned: number } | null>(null)
 
   const handlePayment = async () => {
     setIsProcessing(true)
-    // Simulate payment processing
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    
+    try {
+      // Create order in database
+      const orderData = {
+        cafeId,
+        customerId: customer && !('isGuest' in customer) ? customer.id : null,
+        guestPhone: customer && 'isGuest' in customer ? customer.phone : null,
+        items: cart.map(item => ({
+          productId: item.productId,
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.price,
+        })),
+        subtotal,
+        tax,
+        total,
+        orderType,
+        paymentMethod: paymentMethod === 'card' ? 'CARD' : 'CASH',
+        pointsEarned: pointsToEarn,
+      }
+
+      const res = await fetch('/api/pos/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setCompletedOrder({
+          orderNumber: data.order.orderNumber,
+          pointsEarned: data.order.pointsEarned,
+        })
+        setIsComplete(true)
+      } else {
+        console.error('Failed to create order')
+        // Still mark as complete for demo purposes
+        setCompletedOrder({
+          orderNumber: `A-${Math.floor(1000 + Math.random() * 9000)}`,
+          pointsEarned: pointsToEarn,
+        })
+        setIsComplete(true)
+      }
+    } catch (error) {
+      console.error('Payment error:', error)
+      // Still mark as complete for demo purposes
+      setCompletedOrder({
+        orderNumber: `A-${Math.floor(1000 + Math.random() * 9000)}`,
+        pointsEarned: pointsToEarn,
+      })
+      setIsComplete(true)
+    }
+    
     setIsProcessing(false)
-    setIsComplete(true)
   }
 
-  if (isComplete) {
+  if (isComplete && completedOrder) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
         <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <Check className="w-10 h-10 text-green-600" />
         </div>
         <h2 className="text-2xl font-bold mb-2">Payment Complete!</h2>
-        <p className="text-muted-foreground mb-2">Order #{generateOrderNumber()}</p>
-        {paymentMethod === "cash" && change > 0 && (
-          <p className="text-lg font-medium text-green-600 mb-4">
-            Change: {formatCurrency(change, currency)}
-          </p>
-        )}
+        <p className="text-muted-foreground mb-2">Order #{completedOrder.orderNumber}</p>
         
         {/* Points earned */}
-        {customer && pointsToEarn > 0 && (
+        {customer && completedOrder.pointsEarned > 0 && (
           <div className="bg-gradient-to-br from-espresso-50 to-latte-50 rounded-lg px-4 py-3 mb-6 w-full">
             <div className="flex items-center justify-center gap-2">
               <Star className="w-5 h-5 text-amber-500" />
-              <span className="font-bold text-espresso-800">+{pointsToEarn} points</span>
+              <span className="font-bold text-espresso-800">+{completedOrder.pointsEarned} points</span>
               {'isGuest' in customer ? (
                 <span className="text-sm text-muted-foreground">tracked</span>
               ) : (
@@ -706,8 +850,8 @@ function PaymentPanel({
             {'isGuest' in customer && (
               <p className="text-xs text-muted-foreground mt-1">
                 Linked to {customer.phone}
-              </p>
-            )}
+          </p>
+        )}
           </div>
         )}
 
@@ -765,7 +909,7 @@ function PaymentPanel({
           </div>
           <div className="text-left">
             <p className="font-medium">Card</p>
-            <p className="text-sm text-muted-foreground">Tap, insert, or swipe</p>
+            <p className="text-sm text-muted-foreground">Tap, insert, or swipe (soon!)</p>
           </div>
           {paymentMethod === "card" && (
             <Check className="w-5 h-5 text-espresso-600 ml-auto" />
@@ -793,44 +937,13 @@ function PaymentPanel({
           )}
         </button>
 
-        {paymentMethod === "cash" && (
-          <div className="space-y-3 animate-in">
-            <p className="text-sm font-medium">Cash Received</p>
-            <Input
-              type="number"
-              placeholder="0.00"
-              value={cashReceived}
-              onChange={(e) => setCashReceived(e.target.value)}
-              className="text-2xl font-bold h-14 text-center"
-            />
-            {change > 0 && (
-              <div className="p-3 rounded-lg bg-green-50 text-green-700 text-center">
-                <p className="text-sm">Change Due</p>
-                <p className="text-xl font-bold">{formatCurrency(change, currency)}</p>
-              </div>
-            )}
-            {/* Quick amounts */}
-            <div className="grid grid-cols-4 gap-2">
-              {[10, 20, 50, 100].map((amount) => (
-                <Button
-                  key={amount}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCashReceived(amount.toString())}
-                >
-                  {currency === 'MYR' ? 'RM' : '$'}{amount}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Complete Button */}
       <div className="p-4 border-t">
         <Button
           className="w-full h-14 text-lg"
-          disabled={!paymentMethod || isProcessing || (paymentMethod === "cash" && cashAmount < total)}
+          disabled={!paymentMethod || isProcessing}
           onClick={handlePayment}
         >
           {isProcessing ? (

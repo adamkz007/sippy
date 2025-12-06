@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { Store, TrendingUp, Users, ArrowRight, Smartphone } from "lucide-react"
 
@@ -18,43 +19,62 @@ export default function HomePage() {
           {/* Background Decor */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-radial from-primary/20 to-transparent rounded-full blur-3xl -z-10 pointer-events-none" />
           
-          <div className="max-w-5xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-border shadow-sm mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              <span className="text-sm font-medium text-muted-foreground">OS for cafes</span>
-            </div>
-            
-            <h1 className="text-6xl md:text-8xl font-bold text-foreground font-display leading-[0.9] mb-8 tracking-tighter animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100">
-              Stress-free systems <br/>
-              <span className="text-muted-foreground">for your cafe.</span>
-            </h1>
-            
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
-              Centralize your POS, inventory, and workforce management. 
-              Real-time insights that actually improve your bottom line.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
-              <Button size="xl" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold h-16 px-10 text-lg shadow-xl shadow-primary/20 rounded-full transition-all hover:-translate-y-1">
-                <Link href="/register">
-                  Get Started Free
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </Button>
-              <Button size="xl" variant="outline" asChild className="h-16 px-10 text-lg rounded-full border-2 border-border bg-white hover:bg-muted text-muted-foreground hover:text-foreground transition-all hover:-translate-y-1">
-                <Link href="/demo">
-                  View Live Demo
-                </Link>
-              </Button>
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-12 items-center">
+              <div className="text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-border shadow-sm mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">OS for cafes</span>
+                </div>
+                
+                <h1 className="text-6xl md:text-8xl font-bold text-foreground font-display leading-[0.9] mb-8 tracking-tighter animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100">
+                  Clarity <br/>
+                  <span className="text-muted-foreground">for your café.</span>
+                </h1>
+                
+                <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl lg:mx-0 mx-auto mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+                  Streamline your café operations. Pour good coffee. And keep customers coming back.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+                  <Button size="xl" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold h-16 px-10 text-lg shadow-xl shadow-primary/20 rounded-full transition-all hover:-translate-y-1">
+                    <Link href="/register">
+                      Get Started
+                      <ArrowRight className="ml-2 w-5 h-5" />
+                    </Link>
+                  </Button>
+                  <Button size="xl" variant="outline" asChild className="h-16 px-10 text-lg rounded-full border-2 border-border bg-white hover:bg-muted text-muted-foreground hover:text-foreground transition-all hover:-translate-y-1">
+                    <Link href="/demo">
+                      View Live Demo
+                    </Link>
+                  </Button>
+                </div>
+
+              </div>
+
+              {/* Hero Image */}
+              <div className="hidden lg:block relative animate-in fade-in slide-in-from-right-8 duration-1000 delay-200">
+                <div className="absolute inset-0 bg-gradient-radial from-primary/10 to-transparent blur-3xl -z-10" />
+                <div className="relative w-full overflow-hidden rounded-[2rem] border border-border shadow-2xl shadow-primary/10">
+                  <Image
+                    src="https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=1600&h=1200&fit=crop"
+                    alt="Barista crafting coffee in a cozy café"
+                    width={900}
+                    height={900}
+                    className="w-full h-full object-cover"
+                    priority
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Social Proof */}
-            <div className="mt-20 pt-10 border-t border-border/60 animate-in fade-in duration-1000 delay-500">
-              <p className="text-sm font-medium text-muted-foreground mb-6">TRUSTED BY FORWARD-THINKING CAFES</p>
-              <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+            {/* Social Proof - full width */}
+            <div className="mt-16 pt-10 border-t border-border/60 animate-in fade-in duration-1000 delay-500">
+              <p className="text-sm font-medium text-muted-foreground mb-6 text-center lg:text-left">TRUSTED BY FORWARD-THINKING CAFES</p>
+              <div className="flex flex-wrap justify-center lg:justify-start gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
                  {/* Brand Logos (Placeholders styled as text for now) */}
                  {['Roast & Co.', 'Daily Grind', 'Bean Scene', 'Urban Brew', 'The Nook'].map((brand) => (
                    <span key={brand} className="text-xl font-bold font-display text-foreground">{brand}</span>
@@ -111,10 +131,10 @@ export default function HomePage() {
                       <TrendingUp className="w-7 h-7 text-white" />
                    </div>
                    <h3 className="text-3xl font-bold mb-4 tracking-tight">Real-time Analytics</h3>
-                   <p className="text-lg text-white/80 mb-12 leading-relaxed">
+                   <p className="text-lg text-white/80 mb-6 leading-relaxed">
                      Make decisions based on data, not gut feel. Track labor costs, COGS, and margins in real-time.
                    </p>
-                   <div className="mt-auto w-full bg-cream-200/20 rounded-2xl border border-cream-200/30 p-6 backdrop-blur-sm">
+                   <div className="mt-auto w-full bg-cream-200/20 rounded-2xl border border-cream-200/30 p-5 backdrop-blur-sm -mx-2">
                       <div className="flex justify-between items-end mb-2">
                          <div className="text-sm text-cream-200/70">Net Sales</div>
                          <div className="text-2xl font-bold text-cream-100">{formatCurrency(12450)}</div>

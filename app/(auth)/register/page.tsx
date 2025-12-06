@@ -30,6 +30,7 @@ function RegisterContent() {
     // Cafe-specific fields
     cafeName: "",
     cafeSlug: "",
+    cafeAddress: "",
   })
 
   // Auto-generate slug from cafe name
@@ -62,6 +63,7 @@ function RegisterContent() {
             password: formData.password,
             cafeName: formData.cafeName,
             cafeSlug: formData.cafeSlug,
+            cafeAddress: formData.cafeAddress,
           }
         : {
             name: formData.name,
@@ -326,6 +328,21 @@ function RegisterContent() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     This will be your cafe&apos;s unique URL for online ordering
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cafeAddress">Cafe Address</Label>
+                  <Input
+                    id="cafeAddress"
+                    type="text"
+                    placeholder="123 Bean St, Melbourne"
+                    value={formData.cafeAddress}
+                    onChange={(e) => setFormData({ ...formData, cafeAddress: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Customers will use this to find and visit your cafe
                   </p>
                 </div>
               </>

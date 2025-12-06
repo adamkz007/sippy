@@ -11,6 +11,11 @@ const setupSchema = z.object({
   // Cafe-specific fields
   cafeName: z.string().optional(),
   cafeSlug: z.string().optional(),
+  cafeAddress: z.string().optional(),
+  cafeCity: z.string().optional().nullable(),
+  cafeLatitude: z.number().optional().nullable(),
+  cafeLongitude: z.number().optional().nullable(),
+  cafePlaceId: z.string().optional().nullable(),
 })
 
 export async function POST(req: Request) {
@@ -45,6 +50,13 @@ export async function POST(req: Request) {
           )
         }
 
+        if (!data.cafeAddress) {
+          return NextResponse.json(
+            { error: "Cafe address is required for customers to find your cafe" },
+            { status: 400 }
+          )
+        }
+
         // Check if slug is unique
         const existingCafe = await prisma.cafe.findUnique({
           where: { slug: data.cafeSlug },
@@ -64,6 +76,11 @@ export async function POST(req: Request) {
               name: data.cafeName!,
               slug: data.cafeSlug!,
               email: existingUser.email,
+              address: data.cafeAddress!,
+              city: data.cafeCity || null,
+              latitude: data.cafeLatitude || null,
+              longitude: data.cafeLongitude || null,
+              placeId: data.cafePlaceId || null,
             },
           })
 
@@ -106,6 +123,13 @@ export async function POST(req: Request) {
         )
       }
 
+      if (!data.cafeAddress) {
+        return NextResponse.json(
+          { error: "Cafe address is required for customers to find your cafe" },
+          { status: 400 }
+        )
+      }
+
       // Check if slug is unique
       const existingCafe = await prisma.cafe.findUnique({
         where: { slug: data.cafeSlug },
@@ -133,6 +157,11 @@ export async function POST(req: Request) {
             name: data.cafeName!,
             slug: data.cafeSlug!,
             email: data.email,
+            address: data.cafeAddress!,
+            city: data.cafeCity || null,
+            latitude: data.cafeLatitude || null,
+            longitude: data.cafeLongitude || null,
+            placeId: data.cafePlaceId || null,
           },
         })
 

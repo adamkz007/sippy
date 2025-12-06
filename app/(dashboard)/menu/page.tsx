@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, ChangeEvent } from "react"
 import { useSession } from "next-auth/react"
+import Image from "next/image"
 import { 
   Plus, 
   Search, 
@@ -61,6 +62,7 @@ interface Product {
   id: string
   name: string
   description?: string | null
+  image?: string | null
   price: number
   cost?: number | null
   categoryId: string
@@ -84,11 +86,13 @@ const initialCategoryForm = {
 const initialProductForm = {
   name: "",
   description: "",
+  image: "",
   price: "",
   cost: "",
   categoryId: "",
   isActive: true,
   isPopular: false,
+  isCoffeeItem: false,
   roastLevel: "",
   origin: "",
   flavorNotes: [] as string[],
@@ -102,7 +106,7 @@ const initialModifierForm = {
 }
 
 export default function MenuPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const { toast } = useToast()
   const { currency } = useCurrency()
   
@@ -113,6 +117,7 @@ export default function MenuPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [imageUploading, setImageUploading] = useState(false)
   
   // Modal states
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
@@ -131,7 +136,8 @@ export default function MenuPage() {
   const [productTab, setProductTab] = useState("details")
   
   // Get cafeId from session - staff profile includes cafeId
-  const cafeId = (session?.user as any)?.cafeId || ""
+  const staffProfiles = (session?.user as any)?.staffProfiles || []
+  const cafeId = staffProfiles[0]?.cafeId || ""
 
   // Fetch data
   const fetchCategories = useCallback(async () => {
@@ -160,16 +166,66 @@ export default function MenuPage() {
     }
   }, [cafeId])
 
+  const handleProductImageUpload = async (file: File) => {
+    setImageUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("filename", file.name)
+      formData.append("contentType", file.type)
+
+      const uploadRes = await fetch("/api/blob-upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      const uploadData = await uploadRes.json()
+      if (!uploadRes.ok || !uploadData.url) {
+        throw new Error("Upload failed")
+      }
+
+      setProductForm(prev => ({ ...prev, image: uploadData.url }))
+      toast({ title: "Image uploaded", description: "Product image updated" })
+    } catch (error: any) {
+      console.error("Product image upload error:", error)
+      toast({
+        title: "Upload failed",
+        description: error?.message || "Could not upload image",
+        variant: "destructive",
+      })
+    } finally {
+      setImageUploading(false)
+    }
+  }
+
+  const handleProductImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please upload an image", variant: "destructive" })
+      return
+    }
+    handleProductImageUpload(file)
+    event.target.value = ""
+  }
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)
       await Promise.all([fetchCategories(), fetchProducts()])
       setLoading(false)
     }
+    
+    // Only proceed if session is loaded
+    if (status === "loading") return
+    
     if (cafeId) {
       loadData()
+    } else {
+      // No cafeId, stop loading
+      setLoading(false)
     }
-  }, [cafeId, fetchCategories, fetchProducts])
+  }, [cafeId, status, fetchCategories, fetchProducts])
 
   // Filter products
   const filteredProducts = products.filter((product) => {
@@ -231,14 +287,18 @@ export default function MenuPage() {
   const openProductModal = (product?: Product) => {
     if (product) {
       setEditingProduct(product)
+      // Determine if it's a coffee item based on whether any coffee fields have values
+      const hasCoffeeFields = !!(product.roastLevel || product.origin || (product.flavorNotes && product.flavorNotes.length > 0))
       setProductForm({
         name: product.name,
         description: product.description || "",
+        image: product.image || "",
         price: product.price.toString(),
         cost: product.cost?.toString() || "",
         categoryId: product.categoryId,
         isActive: product.isActive,
         isPopular: product.isPopular,
+        isCoffeeItem: hasCoffeeFields,
         roastLevel: product.roastLevel || "",
         origin: product.origin || "",
         flavorNotes: product.flavorNotes || [],
@@ -275,14 +335,16 @@ export default function MenuPage() {
         ...(editingProduct ? { id: editingProduct.id } : { cafeId }),
         name: productForm.name,
         description: productForm.description || null,
+        image: productForm.image || null,
         price: parseFloat(productForm.price),
         cost: productForm.cost ? parseFloat(productForm.cost) : null,
         categoryId: productForm.categoryId,
         isActive: productForm.isActive,
         isPopular: productForm.isPopular,
-        roastLevel: productForm.roastLevel || null,
-        origin: productForm.origin || null,
-        flavorNotes: productForm.flavorNotes,
+        // Only include coffee fields if it's marked as a coffee item
+        roastLevel: productForm.isCoffeeItem ? (productForm.roastLevel || null) : null,
+        origin: productForm.isCoffeeItem ? (productForm.origin || null) : null,
+        flavorNotes: productForm.isCoffeeItem ? productForm.flavorNotes : [],
       }
       
       const res = await fetch("/api/products", {
@@ -459,10 +521,27 @@ export default function MenuPage() {
     setProductForm(prev => ({ ...prev, flavorNotes: notes }))
   }
 
-  if (loading) {
+  if (loading || status === "loading") {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="w-8 h-8 animate-spin text-espresso-600" />
+      </div>
+    )
+  }
+
+  if (!cafeId) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <Coffee className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-lg font-semibold mb-2">No Cafe Found</h2>
+            <p className="text-muted-foreground">
+              You need to be associated with a cafe to manage its menu.
+              Please contact your administrator or set up a cafe first.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -589,8 +668,17 @@ export default function MenuPage() {
                     <button className="cursor-grab text-muted-foreground hover:text-foreground">
                       <GripVertical className="w-4 h-4" />
                     </button>
-                    <div className="w-10 h-10 rounded-lg bg-espresso-100 flex items-center justify-center">
-                      <Coffee className="w-5 h-5 text-espresso-600" />
+                    <div className="relative w-10 h-10 rounded-lg bg-espresso-100 overflow-hidden flex items-center justify-center">
+                      {product.image ? (
+                        <Image
+                          src={product.image}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <Coffee className="w-5 h-5 text-espresso-600" />
+                      )}
                     </div>
                     <div>
                       <p className={cn("font-medium", !product.isActive && "text-muted-foreground")}>
@@ -743,9 +831,9 @@ export default function MenuPage() {
           </DialogHeader>
           
           <Tabs value={productTab} onValueChange={setProductTab}>
-            <TabsList className="w-full">
-              <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
-              {editingProduct && (
+            {editingProduct && (
+              <TabsList className="w-full">
+                <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
                 <TabsTrigger value="addons" className="flex-1">
                   Add-ons
                   {editingProduct.modifiers.length > 0 && (
@@ -754,8 +842,8 @@ export default function MenuPage() {
                     </Badge>
                   )}
                 </TabsTrigger>
-              )}
-            </TabsList>
+              </TabsList>
+            )}
 
             <TabsContent value="details">
               <DialogBody className="space-y-4 max-h-[60vh] overflow-y-auto">
@@ -776,7 +864,10 @@ export default function MenuPage() {
                       onValueChange={(value) => setProductForm(prev => ({ ...prev, categoryId: value }))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                        {productForm.categoryId 
+                          ? categories.find(c => c.id === productForm.categoryId)?.name || "Select category"
+                          : "Select category"
+                        }
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((cat) => (
@@ -798,6 +889,56 @@ export default function MenuPage() {
                     placeholder="Brief description of the item"
                     rows={2}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Product Image</Label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-20 h-20 rounded-md border bg-muted overflow-hidden">
+                      {productForm.image ? (
+                        <Image
+                          src={productForm.image}
+                          alt="Product image"
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-muted-foreground text-xs">
+                          <Coffee className="w-4 h-4" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleProductImageChange}
+                            disabled={imageUploading}
+                          />
+                          <Button type="button" size="sm" disabled={imageUploading}>
+                            {imageUploading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {productForm.image ? "Change" : "Upload"}
+                          </Button>
+                        </label>
+                        {productForm.image && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setProductForm(prev => ({ ...prev, image: "" }))}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Images are shown in POS and customer ordering experiences.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -839,46 +980,70 @@ export default function MenuPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="product-roast">Roast Level</Label>
-                    <Select
-                      value={productForm.roastLevel}
-                      onValueChange={(value) => setProductForm(prev => ({ ...prev, roastLevel: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select roast" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">None</SelectItem>
-                        <SelectItem value="LIGHT">Light</SelectItem>
-                        <SelectItem value="MEDIUM_LIGHT">Medium Light</SelectItem>
-                        <SelectItem value="MEDIUM">Medium</SelectItem>
-                        <SelectItem value="MEDIUM_DARK">Medium Dark</SelectItem>
-                        <SelectItem value="DARK">Dark</SelectItem>
-                      </SelectContent>
-                    </Select>
+                {/* Coffee Item Toggle */}
+                <div className="flex items-center justify-between py-3 px-4 bg-espresso-50 rounded-lg border border-espresso-100">
+                  <div className="flex items-center gap-3">
+                    <Coffee className="w-5 h-5 text-espresso-600" />
+                    <div>
+                      <Label htmlFor="product-coffee" className="text-sm font-medium">Coffee Item?</Label>
+                      <p className="text-xs text-muted-foreground">Enable to add coffee-specific details</p>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="product-origin">Origin</Label>
-                    <Input
-                      id="product-origin"
-                      value={productForm.origin}
-                      onChange={(e) => setProductForm(prev => ({ ...prev, origin: e.target.value }))}
-                      placeholder="e.g., Ethiopian, Colombian"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="product-notes">Flavor Notes</Label>
-                  <Input
-                    id="product-notes"
-                    value={productForm.flavorNotes.join(', ')}
-                    onChange={(e) => handleFlavorNotesChange(e.target.value)}
-                    placeholder="Comma-separated, e.g., chocolate, nutty, fruity"
+                  <Switch
+                    id="product-coffee"
+                    checked={productForm.isCoffeeItem}
+                    onCheckedChange={(checked) => setProductForm(prev => ({ ...prev, isCoffeeItem: checked }))}
                   />
                 </div>
+
+                {/* Coffee-specific fields - only shown when isCoffeeItem is true */}
+                {productForm.isCoffeeItem && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="product-roast">Roast Level</Label>
+                        <Select
+                          value={productForm.roastLevel}
+                          onValueChange={(value) => setProductForm(prev => ({ ...prev, roastLevel: value }))}
+                        >
+                          <SelectTrigger>
+                            {productForm.roastLevel 
+                              ? { LIGHT: "Light", MEDIUM_LIGHT: "Medium Light", MEDIUM: "Medium", MEDIUM_DARK: "Medium Dark", DARK: "Dark" }[productForm.roastLevel] || "Select roast"
+                              : "Select roast"
+                            }
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="LIGHT">Light</SelectItem>
+                            <SelectItem value="MEDIUM_LIGHT">Medium Light</SelectItem>
+                            <SelectItem value="MEDIUM">Medium</SelectItem>
+                            <SelectItem value="MEDIUM_DARK">Medium Dark</SelectItem>
+                            <SelectItem value="DARK">Dark</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="product-origin">Origin</Label>
+                        <Input
+                          id="product-origin"
+                          value={productForm.origin}
+                          onChange={(e) => setProductForm(prev => ({ ...prev, origin: e.target.value }))}
+                          placeholder="e.g., Ethiopian, Colombian"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="product-notes">Flavor Notes</Label>
+                      <Input
+                        id="product-notes"
+                        value={productForm.flavorNotes.join(', ')}
+                        onChange={(e) => handleFlavorNotesChange(e.target.value)}
+                        placeholder="Comma-separated, e.g., chocolate, nutty, fruity"
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div className="flex gap-6 pt-2">
                   <div className="flex items-center gap-3">

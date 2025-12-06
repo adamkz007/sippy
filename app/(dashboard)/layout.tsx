@@ -151,7 +151,10 @@ export default function DashboardLayout({
             sidebarCollapsed ? "lg:p-2" : "p-4"
           )}>
             {navigation.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+              // Dashboard should only be active on exact match since it has nested routes
+              const isActive = item.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname === item.href || pathname.startsWith(item.href + "/")
               return (
                 <Link
                   key={item.name}

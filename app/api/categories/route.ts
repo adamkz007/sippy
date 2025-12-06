@@ -7,7 +7,7 @@ import { z } from "zod"
 export const dynamic = 'force-dynamic'
 
 const createCategorySchema = z.object({
-  cafeId: z.string(),
+  cafeId: z.string().cuid("Invalid cafeId"),
   name: z.string().min(1),
   description: z.string().optional(),
   image: z.string().optional(),
@@ -75,6 +75,35 @@ export async function POST(req: Request) {
     const body = await req.json()
     const data = createCategorySchema.parse(body)
 
+    // Ensure cafe exists and user has access before creating
+    const cafe = await prisma.cafe.findUnique({
+      where: { id: data.cafeId },
+      select: { id: true },
+    })
+
+    if (!cafe) {
+      return NextResponse.json({ error: "Cafe not found" }, { status: 404 })
+    }
+
+    const hasAccess =
+      session.user.role === "ADMIN" ||
+      session.user.role === "SUPERADMIN" ||
+      !!(await prisma.staffProfile.findFirst({
+        where: {
+          userId: session.user.id,
+          cafeId: data.cafeId,
+          isActive: true,
+        },
+        select: { id: true },
+      }))
+
+    if (!hasAccess) {
+      return NextResponse.json(
+        { error: "You do not have permission to manage this cafe" },
+        { status: 403 }
+      )
+    }
+
     // Get the highest sortOrder for this cafe
     const maxSortOrder = await prisma.category.aggregate({
       where: { cafeId: data.cafeId },
@@ -99,7 +128,8 @@ export async function POST(req: Request) {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      const errorMessage = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      return NextResponse.json({ error: errorMessage }, { status: 400 })
     }
     console.error("Category creation error:", error)
     return NextResponse.json(
@@ -136,7 +166,8 @@ export async function PATCH(req: Request) {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      const errorMessage = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      return NextResponse.json({ error: errorMessage }, { status: 400 })
     }
     console.error("Category update error:", error)
     return NextResponse.json(

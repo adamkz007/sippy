@@ -1,5 +1,7 @@
 "use client"
 
+import { useState, useEffect, useCallback } from "react"
+import { useSession } from "next-auth/react"
 import { 
   TrendingUp, 
   TrendingDown,
@@ -8,54 +10,115 @@ import {
   Users,
   Coffee,
   Calendar,
-  ArrowUpRight
+  Loader2
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { formatCurrency } from "@/lib/utils"
+import { useCurrency } from "@/components/currency-context"
 
-// Mock data
-const periodStats = {
-  revenue: { current: 12450, previous: 11200 },
-  orders: { current: 856, previous: 792 },
-  avgTicket: { current: 14.54, previous: 14.14 },
-  customers: { current: 234, previous: 198 },
+interface PeriodStats {
+  revenue: { current: number; previous: number }
+  orders: { current: number; previous: number }
+  avgTicket: { current: number; previous: number }
+  customers: { current: number; previous: number }
 }
 
-const hourlyData = [
-  { hour: "6am", orders: 12, revenue: 68 },
-  { hour: "7am", orders: 34, revenue: 187 },
-  { hour: "8am", orders: 67, revenue: 389 },
-  { hour: "9am", orders: 45, revenue: 256 },
-  { hour: "10am", orders: 38, revenue: 215 },
-  { hour: "11am", orders: 42, revenue: 312 },
-  { hour: "12pm", orders: 56, revenue: 445 },
-  { hour: "1pm", orders: 48, revenue: 367 },
-  { hour: "2pm", orders: 35, revenue: 198 },
-  { hour: "3pm", orders: 41, revenue: 234 },
-  { hour: "4pm", orders: 29, revenue: 156 },
-  { hour: "5pm", orders: 18, revenue: 98 },
-]
+interface HourlyData {
+  hour: string
+  orders: number
+  revenue: number
+}
 
-const topProducts = [
-  { name: "Flat White", orders: 156, revenue: 858.00, growth: 12 },
-  { name: "Long Black", orders: 134, revenue: 603.00, growth: 8 },
-  { name: "Oat Latte", orders: 98, revenue: 637.00, growth: 24 },
-  { name: "Cappuccino", orders: 87, revenue: 478.50, growth: -3 },
-  { name: "Cold Brew", orders: 76, revenue: 418.00, growth: 18 },
-]
+interface TopProduct {
+  name: string
+  orders: number
+  revenue: number
+  growth: number
+}
 
-const customerInsights = [
-  { label: "Repeat Rate", value: "67%", change: 5 },
-  { label: "Avg. Visits/Month", value: "4.2", change: 0.3 },
-  { label: "Loyalty Signup", value: "34%", change: 8 },
-  { label: "Cross-Cafe Visits", value: "12%", change: 2 },
-]
+interface CustomerInsight {
+  label: string
+  value: string
+  change: number
+}
 
 export default function AnalyticsPage() {
+  const { data: session, status: sessionStatus } = useSession()
+  const { formatCurrency } = useCurrency()
+  
+  const [loading, setLoading] = useState(true)
+  const [periodStats, setPeriodStats] = useState<PeriodStats>({
+    revenue: { current: 0, previous: 0 },
+    orders: { current: 0, previous: 0 },
+    avgTicket: { current: 0, previous: 0 },
+    customers: { current: 0, previous: 0 },
+  })
+  const [hourlyData, setHourlyData] = useState<HourlyData[]>([])
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([])
+  const [customerInsights, setCustomerInsights] = useState<CustomerInsight[]>([])
+
+  // Get cafeId from session
+  const staffProfiles = (session?.user as any)?.staffProfiles || []
+  const cafeId = staffProfiles[0]?.cafeId || ""
+
+  const fetchAnalytics = useCallback(async () => {
+    if (!cafeId) return
+    
+    try {
+      const res = await fetch(`/api/dashboard/analytics?cafeId=${cafeId}&days=7`)
+      if (res.ok) {
+        const data = await res.json()
+        setPeriodStats(data.periodStats)
+        setHourlyData(data.hourlyData)
+        setTopProducts(data.topProducts)
+        setCustomerInsights(data.customerInsights)
+      }
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error)
+    }
+    setLoading(false)
+  }, [cafeId])
+
+  useEffect(() => {
+    if (sessionStatus === "loading") return
+    
+    if (cafeId) {
+      fetchAnalytics()
+    } else {
+      setLoading(false)
+    }
+  }, [cafeId, sessionStatus, fetchAnalytics])
+
   const calculateChange = (current: number, previous: number) => {
-    return ((current - previous) / previous * 100).toFixed(1)
+    if (previous === 0) return 0
+    return Number((((current - previous) / previous) * 100).toFixed(1))
+  }
+
+  const maxOrders = Math.max(...hourlyData.map((h) => h.orders), 1)
+
+  if (loading || sessionStatus === "loading") {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-espresso-600" />
+      </div>
+    )
+  }
+
+  if (!cafeId) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <Coffee className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-lg font-semibold mb-2">No Cafe Found</h2>
+            <p className="text-muted-foreground">
+              You need to be associated with a cafe to view analytics.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -82,25 +145,25 @@ export default function AnalyticsPage() {
         <MetricCard
           title="Revenue"
           value={formatCurrency(periodStats.revenue.current)}
-          change={parseFloat(calculateChange(periodStats.revenue.current, periodStats.revenue.previous))}
+          change={calculateChange(periodStats.revenue.current, periodStats.revenue.previous)}
           icon={DollarSign}
         />
         <MetricCard
           title="Orders"
           value={periodStats.orders.current.toString()}
-          change={parseFloat(calculateChange(periodStats.orders.current, periodStats.orders.previous))}
+          change={calculateChange(periodStats.orders.current, periodStats.orders.previous)}
           icon={ShoppingBag}
         />
         <MetricCard
           title="Avg. Ticket"
           value={formatCurrency(periodStats.avgTicket.current)}
-          change={parseFloat(calculateChange(periodStats.avgTicket.current, periodStats.avgTicket.previous))}
+          change={calculateChange(periodStats.avgTicket.current, periodStats.avgTicket.previous)}
           icon={Coffee}
         />
         <MetricCard
           title="Customers"
           value={periodStats.customers.current.toString()}
-          change={parseFloat(calculateChange(periodStats.customers.current, periodStats.customers.previous))}
+          change={0}
           icon={Users}
         />
       </div>
@@ -113,30 +176,37 @@ export default function AnalyticsPage() {
             <CardDescription>Orders and revenue by hour today</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {hourlyData.map((hour) => {
-                const maxOrders = Math.max(...hourlyData.map(h => h.orders))
-                const percentage = (hour.orders / maxOrders) * 100
-                
-                return (
-                  <div key={hour.hour} className="flex items-center gap-4">
-                    <div className="w-12 text-sm text-muted-foreground">{hour.hour}</div>
-                    <div className="flex-1">
-                      <div className="h-6 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-espresso-500 rounded-full transition-all"
-                          style={{ width: `${percentage}%` }}
+            {hourlyData.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Coffee className="w-8 h-8 mx-auto mb-2" />
+                <p>No activity data yet</p>
+              </div>
+            ) : (
+            <div className="space-y-4">
+              <div className="flex items-end gap-3 h-56">
+                {hourlyData.map((hour) => {
+                  const barHeight = (hour.orders / maxOrders) * 100
+
+                  return (
+                    <div key={hour.hour} className="flex-1 flex flex-col items-center gap-2">
+                      <div className="text-xs font-medium text-espresso-900">{hour.orders}</div>
+                      <div className="w-full bg-muted rounded-md overflow-hidden h-40 flex items-end">
+                        <div
+                          className="w-full bg-espresso-500 rounded-md transition-all"
+                          style={{ height: `${barHeight}%`, minHeight: hour.orders > 0 ? "6px" : "0px" }}
                         />
                       </div>
+                      <div className="text-xs text-muted-foreground">{hour.hour}</div>
                     </div>
-                    <div className="w-20 text-right">
-                      <span className="font-medium">{hour.orders}</span>
-                      <span className="text-muted-foreground text-sm"> orders</span>
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Orders per hour</span>
+                <span>Peak: {maxOrders}</span>
+              </div>
             </div>
+            )}
           </CardContent>
         </Card>
 
@@ -147,6 +217,12 @@ export default function AnalyticsPage() {
             <CardDescription>Best performers this period</CardDescription>
           </CardHeader>
           <CardContent>
+            {topProducts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Coffee className="w-8 h-8 mx-auto mb-2" />
+                <p>No sales data yet</p>
+              </div>
+            ) : (
             <div className="space-y-4">
               {topProducts.map((product, index) => (
                 <div key={product.name} className="flex items-center gap-4">
@@ -167,6 +243,7 @@ export default function AnalyticsPage() {
                 </div>
               ))}
             </div>
+            )}
           </CardContent>
         </Card>
 
@@ -182,9 +259,11 @@ export default function AnalyticsPage() {
                 <div key={insight.label} className="text-center p-4 rounded-xl bg-muted/50">
                   <p className="text-3xl font-bold">{insight.value}</p>
                   <p className="text-sm text-muted-foreground mb-2">{insight.label}</p>
+                  {insight.change !== 0 && (
                   <Badge variant={insight.change >= 0 ? "success" : "destructive"}>
                     {insight.change >= 0 ? "+" : ""}{insight.change}%
                   </Badge>
+                  )}
                 </div>
               ))}
             </div>
@@ -224,4 +303,3 @@ function MetricCard({
     </Card>
   )
 }
-

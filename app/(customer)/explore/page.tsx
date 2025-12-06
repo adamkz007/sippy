@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { 
@@ -16,97 +16,37 @@ import {
   Wifi,
   CreditCard,
   Dog,
-  Leaf
+  Leaf,
+  Loader2,
+  LocateFixed,
+  AlertCircle
 } from "lucide-react"
 import { cn, formatCurrency } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useGeolocation } from "@/lib/hooks/use-geolocation"
 
-// Mock cafe data
-const allCafes = [
-  {
-    id: "1",
-    name: "The Daily Grind",
-    slug: "daily-grind",
-    image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400",
-    rating: 4.8,
-    reviews: 234,
-    address: "123 Coffee Street",
-    distance: "0.3 km",
-    prepTime: "5-10 min",
-    tags: ["Specialty", "Single Origin", "WiFi"],
-    isOpen: true,
-    isFavorite: true,
-    features: ["wifi", "card", "dog"],
-    priceRange: "$$",
-  },
-  {
-    id: "2",
-    name: "Brew Lab",
-    slug: "brew-lab",
-    image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400",
-    rating: 4.9,
-    reviews: 456,
-    address: "456 Roaster Lane",
-    distance: "0.5 km",
-    prepTime: "8-12 min",
-    tags: ["Pour Over", "Light Roast"],
-    isOpen: true,
-    isFavorite: false,
-    features: ["wifi", "card", "eco"],
-    priceRange: "$$$",
-  },
-  {
-    id: "3",
-    name: "Coffee Collective",
-    slug: "coffee-collective",
-    image: "https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=400",
-    rating: 4.7,
-    reviews: 189,
-    address: "789 Barista Boulevard",
-    distance: "0.8 km",
-    prepTime: "5-8 min",
-    tags: ["Espresso", "Cozy", "Breakfast"],
-    isOpen: true,
-    isFavorite: true,
-    features: ["wifi", "card"],
-    priceRange: "$$",
-  },
-  {
-    id: "4",
-    name: "Roast Republic",
-    slug: "roast-republic",
-    image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400",
-    rating: 4.6,
-    reviews: 312,
-    address: "321 Bean Street",
-    distance: "1.2 km",
-    prepTime: "10-15 min",
-    tags: ["Dark Roast", "Industrial"],
-    isOpen: false,
-    isFavorite: false,
-    features: ["card", "dog"],
-    priceRange: "$$",
-  },
-  {
-    id: "5",
-    name: "Filter House",
-    slug: "filter-house",
-    image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400",
-    rating: 4.8,
-    reviews: 278,
-    address: "555 Drip Drive",
-    distance: "1.5 km",
-    prepTime: "12-18 min",
-    tags: ["Filter", "Third Wave"],
-    isOpen: true,
-    isFavorite: false,
-    features: ["wifi", "card", "eco"],
-    priceRange: "$$$",
-  },
-]
+interface CafeData {
+  id: string
+  name: string
+  slug: string
+  image: string | null
+  address: string | null
+  city: string | null
+  latitude: number | null
+  longitude: number | null
+  rating: number
+  reviewCount: number
+  distance: string
+  distanceKm: number | null
+  prepTime: string
+  isOpen: boolean
+  tags: string[]
+  features: string[]
+  priceRange: string
+}
 
 const filters = [
   { id: "open", label: "Open Now", icon: Clock },
@@ -121,8 +61,54 @@ export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilters, setActiveFilters] = useState<string[]>(["open"])
   const [viewMode, setViewMode] = useState<"list" | "map">("list")
+  const [cafes, setCafes] = useState<CafeData[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  const { 
+    latitude, 
+    longitude, 
+    loading: locationLoading, 
+    error: locationError,
+    requestLocation,
+    permissionState,
+    isSupported 
+  } = useGeolocation()
+
+  // Fetch cafes from API
+  useEffect(() => {
+    const fetchCafes = async () => {
+      setLoading(true)
+      try {
+        const params = new URLSearchParams({ limit: "50" })
+        if (latitude && longitude) {
+          params.append("lat", latitude.toString())
+          params.append("lng", longitude.toString())
+        }
+        if (searchQuery) {
+          params.append("q", searchQuery)
+        }
+        
+        const res = await fetch(`/api/customer/cafes?${params}`)
+        if (res.ok) {
+          const data = await res.json()
+          setCafes(data.cafes || [])
+        }
+      } catch (err) {
+        console.error("Error fetching cafes:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    const debounceTimer = setTimeout(fetchCafes, 300)
+    return () => clearTimeout(debounceTimer)
+  }, [latitude, longitude, searchQuery])
 
   const toggleFilter = (filterId: string) => {
+    if (filterId === "nearby" && !latitude) {
+      requestLocation()
+      return
+    }
     setActiveFilters(prev => 
       prev.includes(filterId) 
         ? prev.filter(f => f !== filterId)
@@ -130,10 +116,7 @@ export default function ExplorePage() {
     )
   }
 
-  const filteredCafes = allCafes.filter(cafe => {
-    if (searchQuery && !cafe.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false
-    }
+  const filteredCafes = cafes.filter(cafe => {
     if (activeFilters.includes("open") && !cafe.isOpen) {
       return false
     }
@@ -211,10 +194,53 @@ export default function ExplorePage() {
         </div>
       </header>
 
+      {/* Location Banner */}
+      {isSupported && !latitude && permissionState !== "granted" && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="mx-4 mt-3 p-3 rounded-xl bg-gradient-to-r from-espresso-50 to-cream-100 border border-cream-200"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-espresso-100 flex items-center justify-center shrink-0">
+              <LocateFixed className="w-4 h-4 text-espresso-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-espresso-900">Enable location</p>
+              <p className="text-xs text-espresso-600">Sort cafes by distance</p>
+            </div>
+            <Button 
+              size="sm" 
+              onClick={requestLocation}
+              disabled={locationLoading}
+              className="shrink-0"
+            >
+              {locationLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enable"}
+            </Button>
+          </div>
+          {locationError && (
+            <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              {locationError}
+            </p>
+          )}
+        </motion.div>
+      )}
+
       {/* Results Count */}
       <div className="px-4 py-3 flex items-center justify-between">
         <p className="text-sm text-espresso-600">
-          <span className="font-semibold">{filteredCafes.length}</span> cafes found
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading...
+            </span>
+          ) : (
+            <>
+              <span className="font-semibold">{filteredCafes.length}</span> cafes found
+              {latitude && <span className="text-espresso-400"> • sorted by distance</span>}
+            </>
+          )}
         </p>
         <Button variant="ghost" size="sm" className="text-espresso-600 -mr-2">
           <Filter className="w-4 h-4 mr-1" />
@@ -225,99 +251,112 @@ export default function ExplorePage() {
       {/* Cafe List */}
       {viewMode === "list" ? (
         <div className="px-4 space-y-3 pb-4">
-          {filteredCafes.map((cafe, index) => (
-            <Link key={cafe.id} href={`/order/${cafe.slug}`}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-              >
-                <Card className={cn(
-                  "overflow-hidden border-cream-200/50 shadow-sm",
-                  !cafe.isOpen && "opacity-60"
-                )}>
-                  <CardContent className="p-0">
-                    <div className="flex">
-                      {/* Cafe Image */}
-                      <div className="relative w-32 h-32 shrink-0">
-                        <div 
-                          className="absolute inset-0 bg-cover bg-center"
-                          style={{ backgroundImage: `url(${cafe.image})` }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10" />
-                        <button 
-                          className={cn(
-                            "absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                            cafe.isFavorite 
-                              ? "bg-white text-red-500" 
-                              : "bg-black/30 text-white hover:bg-black/50"
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-espresso-400" />
+            </div>
+          ) : filteredCafes.length === 0 ? (
+            <Card className="border-cream-200/50">
+              <CardContent className="p-8 text-center">
+                <Coffee className="w-12 h-12 text-espresso-300 mx-auto mb-4" />
+                <h3 className="font-semibold text-espresso-700 mb-2">No cafes found</h3>
+                <p className="text-sm text-espresso-500">
+                  {searchQuery 
+                    ? "Try adjusting your search terms"
+                    : "Check back later for new cafes in your area"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredCafes.map((cafe, index) => (
+              <Link key={cafe.id} href={`/order/${cafe.slug}`}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <Card className={cn(
+                    "overflow-hidden border-cream-200/50 shadow-sm",
+                    !cafe.isOpen && "opacity-60"
+                  )}>
+                    <CardContent className="p-0">
+                      <div className="flex">
+                        {/* Cafe Image */}
+                        <div className="relative w-32 h-32 shrink-0">
+                          <div 
+                            className="absolute inset-0 bg-cover bg-center"
+                            style={{ backgroundImage: `url(${cafe.image || "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400"})` }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10" />
+                          <button 
+                            className="absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors bg-black/30 text-white hover:bg-black/50"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              // Toggle favorite
+                            }}
+                          >
+                            <Heart className="w-4 h-4" />
+                          </button>
+                          {!cafe.isOpen && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                              <Badge className="bg-white text-espresso-900">Closed</Badge>
+                            </div>
                           )}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            // Toggle favorite
-                          }}
-                        >
-                          <Heart className={cn("w-4 h-4", cafe.isFavorite && "fill-current")} />
-                        </button>
-                        {!cafe.isOpen && (
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                            <Badge className="bg-white text-espresso-900">Closed</Badge>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Cafe Info */}
-                      <div className="flex-1 p-3">
-                        <div className="flex items-start justify-between mb-1">
-                          <div>
-                            <h3 className="font-semibold text-espresso-900">{cafe.name}</h3>
-                            <p className="text-xs text-espresso-500">{cafe.address}</p>
-                          </div>
-                          <div className="flex items-center gap-1 bg-cream-100 px-2 py-0.5 rounded-full">
-                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                            <span className="text-xs font-semibold text-espresso-800">{cafe.rating}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-3 text-xs text-espresso-500 mb-2">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {cafe.distance}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {cafe.prepTime}
-                          </span>
-                          <span className="font-medium">{cafe.priceRange}</span>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {cafe.features.map((feature) => (
-                              <FeatureIcon key={feature} feature={feature} />
-                            ))}
+                        {/* Cafe Info */}
+                        <div className="flex-1 p-3">
+                          <div className="flex items-start justify-between mb-1">
+                            <div>
+                              <h3 className="font-semibold text-espresso-900">{cafe.name}</h3>
+                              <p className="text-xs text-espresso-500 truncate max-w-[180px]">{cafe.address}</p>
+                            </div>
+                            <div className="flex items-center gap-1 bg-cream-100 px-2 py-0.5 rounded-full">
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              <span className="text-xs font-semibold text-espresso-800">{cafe.rating.toFixed(1)}</span>
+                            </div>
                           </div>
-                          <div className="flex gap-1">
-                            {cafe.tags.slice(0, 2).map((tag) => (
-                              <Badge 
-                                key={tag} 
-                                variant="outline" 
-                                className="text-[10px] border-cream-300 text-espresso-600 px-1.5"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
+                          
+                          <div className="flex items-center gap-3 text-xs text-espresso-500 mb-2">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {cafe.distance}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {cafe.prepTime}
+                            </span>
+                            <span className="font-medium">{cafe.priceRange}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {cafe.features.map((feature) => (
+                                <FeatureIcon key={feature} feature={feature} />
+                              ))}
+                            </div>
+                            <div className="flex gap-1">
+                              {cafe.tags.slice(0, 2).map((tag) => (
+                                <Badge 
+                                  key={tag} 
+                                  variant="outline" 
+                                  className="text-[10px] border-cream-300 text-espresso-600 px-1.5"
+                                >
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </Link>
-          ))}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </Link>
+            ))
+          )}
         </div>
       ) : (
         // Map View Placeholder

@@ -89,7 +89,8 @@ export async function POST(req: Request) {
     return NextResponse.json(modifier)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      const errorMessage = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      return NextResponse.json({ error: errorMessage }, { status: 400 })
     }
     console.error("Modifier creation error:", error)
     return NextResponse.json(
@@ -172,7 +173,8 @@ export async function PATCH(req: Request) {
     return NextResponse.json(modifier)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      const errorMessage = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      return NextResponse.json({ error: errorMessage }, { status: 400 })
     }
     console.error("Modifier update error:", error)
     return NextResponse.json(

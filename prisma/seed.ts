@@ -26,16 +26,19 @@ async function main() {
   await prisma.account.deleteMany()
   await prisma.user.deleteMany()
 
-  // Create demo cafe
+  // Create demo cafe with geolocation (Bukit Bintang area)
   const cafe = await prisma.cafe.create({
     data: {
       name: "The Daily Grind",
       slug: "daily-grind",
       description: "Your neighborhood specialty coffee shop serving artisan coffee and fresh pastries",
       image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800",
-      address: "123 Coffee Street",
+      address: "168 Jalan Bukit Bintang, Bukit Bintang, 55100 Kuala Lumpur",
       city: "Kuala Lumpur",
       country: "MY",
+      latitude: 3.1478,
+      longitude: 101.7108,
+      placeId: "ChIJWX5LmJI1zDER-demo-cafe1",
       phone: "+60 3 2345 6789",
       email: "hello@dailygrind.com.my",
       timezone: "Asia/Kuala_Lumpur",
@@ -47,16 +50,19 @@ async function main() {
   })
   console.log("✅ Created cafe:", cafe.name)
 
-  // Create additional cafes for variety
+  // Create additional cafes with geolocation (KLCC area)
   const cafe2 = await prisma.cafe.create({
     data: {
       name: "Brew Lab",
       slug: "brew-lab",
       description: "Experimental coffee roasters with single-origin specialty beans",
       image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800",
-      address: "45 Roast Avenue",
+      address: "Level G, Suria KLCC, Kuala Lumpur City Centre, 50088 Kuala Lumpur",
       city: "Kuala Lumpur",
       country: "MY",
+      latitude: 3.1588,
+      longitude: 101.7117,
+      placeId: "ChIJWX5LmJI1zDER-demo-cafe2",
       phone: "+60 3 9876 5432",
       email: "hello@brewlab.com.my",
       timezone: "Asia/Kuala_Lumpur",
@@ -67,15 +73,19 @@ async function main() {
     },
   })
 
+  // Bangsar area cafe
   const cafe3 = await prisma.cafe.create({
     data: {
       name: "Coffee Collective",
       slug: "coffee-collective",
       description: "Community-focused cafe with cozy atmosphere",
       image: "https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=800",
-      address: "78 Bean Street",
+      address: "35 Jalan Telawi 3, Bangsar, 59100 Kuala Lumpur",
       city: "Kuala Lumpur",
       country: "MY",
+      latitude: 3.1302,
+      longitude: 101.6710,
+      placeId: "ChIJWX5LmJI1zDER-demo-cafe3",
       phone: "+60 3 1111 2222",
       email: "hello@coffeecollective.com.my",
       timezone: "Asia/Kuala_Lumpur",
@@ -85,7 +95,7 @@ async function main() {
       pointsPerRedemption: 100,
     },
   })
-  console.log("✅ Created 3 cafes")
+  console.log("✅ Created 3 cafes with geolocation data")
 
   // Create demo user (cafe owner)
   const passwordHash = await hash("demo1234", 12)

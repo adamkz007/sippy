@@ -1,5 +1,7 @@
 "use client"
 
+import { useState, useEffect, useCallback } from "react"
+import { useSession } from "next-auth/react"
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -8,7 +10,8 @@ import {
   Users, 
   Coffee,
   ArrowUpRight,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -16,34 +19,114 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useCurrency } from "@/components/currency-context"
 
-// Mock data - in production this would come from API
-const stats = {
-  todayRevenue: 1247.50,
-  todayOrders: 87,
-  avgTicket: 14.34,
-  activeCustomers: 42,
-  revenueChange: 12.5,
-  ordersChange: 8.3,
+interface DashboardStats {
+  todayRevenue: number
+  todayOrders: number
+  avgTicket: number
+  activeCustomers: number
+  revenueChange: number
+  ordersChange: number
 }
 
-const recentOrders = [
-  { id: "A-042", customer: "Alex S.", items: 3, total: 18.50, status: "COMPLETED", time: "2 min ago" },
-  { id: "A-041", customer: "Guest", items: 1, total: 5.50, status: "READY", time: "5 min ago" },
-  { id: "A-040", customer: "Maya K.", items: 2, total: 12.00, status: "PREPARING", time: "8 min ago" },
-  { id: "A-039", customer: "Jordan T.", items: 4, total: 24.50, status: "COMPLETED", time: "12 min ago" },
-  { id: "A-038", customer: "Sam L.", items: 2, total: 9.00, status: "COMPLETED", time: "15 min ago" },
-]
+interface RecentOrder {
+  id: string
+  orderNumber: string
+  customer: string
+  items: number
+  total: number
+  status: string
+  createdAt: string
+}
 
-const topProducts = [
-  { name: "Flat White", orders: 34, revenue: 187.00 },
-  { name: "Long Black", orders: 28, revenue: 126.00 },
-  { name: "Oat Latte", orders: 22, revenue: 132.00 },
-  { name: "Cappuccino", orders: 18, revenue: 99.00 },
-  { name: "Cold Brew", orders: 15, revenue: 82.50 },
-]
+interface TopProduct {
+  name: string
+  orders: number
+  revenue: number
+}
 
 export default function DashboardPage() {
+  const { data: session, status } = useSession()
   const { formatCurrency } = useCurrency()
+  
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<DashboardStats>({
+    todayRevenue: 0,
+    todayOrders: 0,
+    avgTicket: 0,
+    activeCustomers: 0,
+    revenueChange: 0,
+    ordersChange: 0,
+  })
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([])
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([])
+
+  // Get cafeId from session
+  const staffProfiles = (session?.user as any)?.staffProfiles || []
+  const cafeId = staffProfiles[0]?.cafeId || ""
+
+  const fetchDashboardData = useCallback(async () => {
+    if (!cafeId) return
+    
+    try {
+      const res = await fetch(`/api/dashboard/stats?cafeId=${cafeId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setStats(data.stats)
+        setRecentOrders(data.recentOrders)
+        setTopProducts(data.topProducts)
+      }
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error)
+    }
+    setLoading(false)
+  }, [cafeId])
+
+  useEffect(() => {
+    if (status === "loading") return
+    
+    if (cafeId) {
+      fetchDashboardData()
+    } else {
+      setLoading(false)
+    }
+  }, [cafeId, status, fetchDashboardData])
+
+  // Format time ago
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60000)
+    if (minutes < 1) return "Just now"
+    if (minutes === 1) return "1 min ago"
+    if (minutes < 60) return `${minutes} mins ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours === 1) return "1 hour ago"
+    if (hours < 24) return `${hours} hours ago`
+    return `${Math.floor(hours / 24)} days ago`
+  }
+
+  if (loading || status === "loading") {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-espresso-600" />
+      </div>
+    )
+  }
+
+  if (!cafeId) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <Coffee className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-lg font-semibold mb-2">No Cafe Found</h2>
+            <p className="text-muted-foreground">
+              You need to be associated with a cafe to view the dashboard.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -84,7 +167,7 @@ export default function DashboardPage() {
           title="Active Customers"
           value={stats.activeCustomers.toString()}
           icon={Users}
-          subtitle="Loyalty members"
+          subtitle="Unique today"
         />
       </div>
 
@@ -105,6 +188,12 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
+            {recentOrders.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Coffee className="w-8 h-8 mx-auto mb-2" />
+                <p>No orders yet today</p>
+              </div>
+            ) : (
             <div className="space-y-4">
               {recentOrders.map((order) => (
                 <div key={order.id} className="flex items-center justify-between">
@@ -114,12 +203,12 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <p className="font-medium text-sm">
-                        Order #{order.id}
+                          Order #{order.orderNumber}
                         <span className="text-muted-foreground font-normal"> · {order.customer}</span>
                       </p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="w-3 h-3" />
-                        {order.time}
+                          {formatTimeAgo(order.createdAt)}
                         <span>·</span>
                         {order.items} item{order.items > 1 ? "s" : ""}
                       </div>
@@ -132,6 +221,7 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+            )}
           </CardContent>
         </Card>
 
@@ -150,6 +240,12 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
+            {topProducts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Coffee className="w-8 h-8 mx-auto mb-2" />
+                <p>No sales data yet</p>
+              </div>
+            ) : (
             <div className="space-y-4">
               {topProducts.map((product, index) => (
                 <div key={product.name} className="flex items-center justify-between">
@@ -166,6 +262,7 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -291,4 +388,3 @@ function QuickAction({
     </Link>
   )
 }
-

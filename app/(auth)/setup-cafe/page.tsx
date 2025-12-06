@@ -1,23 +1,30 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { Coffee, ArrowRight, Store, Loader2 } from "lucide-react"
+import { Coffee, ArrowRight, Store, Loader2, MapPin, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { AddressAutocomplete, AddressData } from "@/components/ui/address-autocomplete"
 
 export default function SetupCafePage() {
   const router = useRouter()
   const { data: session, status, update } = useSession()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [addressError, setAddressError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     cafeName: "",
     cafeSlug: "",
+    address: "",
+    city: null as string | null,
+    latitude: null as number | null,
+    longitude: null as number | null,
+    placeId: null as string | null,
   })
 
   // Auto-generate slug from cafe name
@@ -43,8 +50,30 @@ export default function SetupCafePage() {
     }
   }, [session, status, router])
 
+  const handleAddressSelect = useCallback((data: AddressData) => {
+    setFormData(prev => ({
+      ...prev,
+      address: data.address,
+      city: data.city,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      placeId: data.placeId,
+    }))
+    if (data.address) {
+      setAddressError(null)
+    }
+  }, [])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    
+    // Validate address
+    if (!formData.address.trim()) {
+      setAddressError("Address is required for customers to find your cafe")
+      return
+    }
+    setAddressError(null)
+    
     setIsLoading(true)
 
     try {
@@ -58,6 +87,11 @@ export default function SetupCafePage() {
           image: session?.user?.image,
           cafeName: formData.cafeName,
           cafeSlug: formData.cafeSlug,
+          cafeAddress: formData.address,
+          cafeCity: formData.city,
+          cafeLatitude: formData.latitude,
+          cafeLongitude: formData.longitude,
+          cafePlaceId: formData.placeId,
         }),
       })
 
@@ -166,6 +200,35 @@ export default function SetupCafePage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 This will be your cafe&apos;s unique URL for online ordering
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cafeAddress" className="flex items-center gap-1">
+                Cafe Address <span className="text-red-500">*</span>
+              </Label>
+              <AddressAutocomplete
+                value={formData.address}
+                onChange={(address) => setFormData({ ...formData, address })}
+                onAddressSelect={handleAddressSelect}
+                placeholder="Search for your cafe location..."
+                required
+                error={addressError || undefined}
+              />
+              {formData.latitude && formData.longitude && (
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  Location verified
+                </p>
+              )}
+              {!formData.latitude && formData.address && (
+                <p className="text-xs text-amber-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Select an address from the dropdown
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Your address helps customers find you in nearby searches
               </p>
             </div>
 

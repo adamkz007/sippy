@@ -4,19 +4,13 @@ import * as React from "react"
 import { ChevronDown, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface SelectProps {
-  value: string
-  onValueChange: (value: string) => void
-  children: React.ReactNode
-  placeholder?: string
-  disabled?: boolean
-}
-
 interface SelectContextValue {
   value: string
   onValueChange: (value: string) => void
   open: boolean
   setOpen: (open: boolean) => void
+  selectedLabel: string
+  setSelectedLabel: (label: string) => void
 }
 
 const SelectContext = React.createContext<SelectContextValue | null>(null)
@@ -27,11 +21,20 @@ const useSelectContext = () => {
   return context
 }
 
+interface SelectProps {
+  value: string
+  onValueChange: (value: string) => void
+  children: React.ReactNode
+  placeholder?: string
+  disabled?: boolean
+}
+
 const Select = ({ value, onValueChange, children, disabled }: SelectProps) => {
   const [open, setOpen] = React.useState(false)
+  const [selectedLabel, setSelectedLabel] = React.useState("")
 
   return (
-    <SelectContext.Provider value={{ value, onValueChange, open, setOpen }}>
+    <SelectContext.Provider value={{ value, onValueChange, open, setOpen, selectedLabel, setSelectedLabel }}>
       <div className={cn("relative", disabled && "opacity-50 pointer-events-none")}>
         {children}
       </div>
@@ -116,16 +119,28 @@ interface SelectItemProps {
 }
 
 const SelectItem = ({ value, children, className }: SelectItemProps) => {
-  const { value: selectedValue, onValueChange, setOpen } = useSelectContext()
+  const { value: selectedValue, onValueChange, setOpen, setSelectedLabel } = useSelectContext()
   const isSelected = selectedValue === value
+  
+  // Update selected label when this item is selected
+  React.useEffect(() => {
+    if (isSelected && typeof children === 'string') {
+      setSelectedLabel(children)
+    }
+  }, [isSelected, children, setSelectedLabel])
+
+  const handleClick = () => {
+    onValueChange(value)
+    if (typeof children === 'string') {
+      setSelectedLabel(children)
+    }
+    setOpen(false)
+  }
 
   return (
     <button
       type="button"
-      onClick={() => {
-        onValueChange(value)
-        setOpen(false)
-      }}
+      onClick={handleClick}
       className={cn(
         "relative flex w-full cursor-pointer items-center rounded-md py-2 pl-8 pr-2 text-sm",
         "hover:bg-muted focus:bg-muted focus:outline-none",
@@ -148,9 +163,13 @@ interface SelectValueProps {
 }
 
 const SelectValue = ({ placeholder }: SelectValueProps) => {
-  const { value } = useSelectContext()
-  return <>{value || placeholder}</>
+  const { value, selectedLabel } = useSelectContext()
+  
+  if (!value) {
+    return <>{placeholder}</>
+  }
+  
+  return <>{selectedLabel || value}</>
 }
 
 export { Select, SelectTrigger, SelectContent, SelectItem, SelectValue }
-

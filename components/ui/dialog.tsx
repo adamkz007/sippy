@@ -49,7 +49,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
         className={cn(
           "fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%]",
           "bg-white rounded-xl shadow-xl border",
-          "animate-in fade-in-0 zoom-in-95 duration-200",
+          "animate-in fade-in-0 slide-in-from-bottom-4 duration-300 ease-out",
           "max-h-[85vh] overflow-y-auto",
           className
         )}

@@ -1,84 +1,147 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useSession } from "next-auth/react"
 import { 
   Clock, 
   Coffee, 
   CheckCircle, 
-  XCircle,
-  ChevronRight,
-  Filter,
-  Search
+  Search,
+  Loader2,
+  RefreshCw
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { cn, formatCurrency, getOrderStatusColor } from "@/lib/utils"
+import { Card, CardContent } from "@/components/ui/card"
+import { cn, getOrderStatusColor } from "@/lib/utils"
+import { useCurrency } from "@/components/currency-context"
+import { useToast } from "@/components/ui/use-toast"
 
-// Mock data
-const mockOrders = [
-  { 
-    id: "1", 
-    orderNumber: "A-042", 
-    customer: "Alex Smith", 
-    items: [
-      { name: "Flat White", quantity: 2, price: 5.50 },
-      { name: "Croissant", quantity: 1, price: 5.50 },
-    ],
-    total: 16.50,
-    status: "PREPARING",
-    orderType: "TAKEAWAY",
-    createdAt: new Date(Date.now() - 5 * 60000),
-  },
-  { 
-    id: "2", 
-    orderNumber: "A-041", 
-    customer: null, 
-    items: [
-      { name: "Long Black", quantity: 1, price: 4.50 },
-    ],
-    total: 4.50,
-    status: "READY",
-    orderType: "TAKEAWAY",
-    createdAt: new Date(Date.now() - 8 * 60000),
-  },
-  { 
-    id: "3", 
-    orderNumber: "A-040", 
-    customer: "Maya Kim", 
-    items: [
-      { name: "Oat Latte", quantity: 1, price: 6.50 },
-      { name: "Avocado Toast", quantity: 1, price: 16.00 },
-    ],
-    total: 22.50,
-    status: "PENDING",
-    orderType: "DINE_IN",
-    createdAt: new Date(Date.now() - 2 * 60000),
-  },
-  { 
-    id: "4", 
-    orderNumber: "A-039", 
-    customer: "Jordan Taylor", 
-    items: [
-      { name: "Cold Brew", quantity: 2, price: 5.50 },
-      { name: "Banana Bread", quantity: 2, price: 6.50 },
-    ],
-    total: 24.00,
-    status: "COMPLETED",
-    orderType: "PICKUP",
-    createdAt: new Date(Date.now() - 15 * 60000),
-  },
-]
+interface OrderItem {
+  name: string
+  quantity: number
+  price: number
+}
+
+interface Order {
+  id: string
+  orderNumber: string
+  customer: string | null
+  items: OrderItem[]
+  total: number
+  status: string
+  orderType: string
+  createdAt: string
+}
+
+interface StatusCounts {
+  PENDING: number
+  PREPARING: number
+  READY: number
+  COMPLETED: number
+  CANCELLED: number
+}
+
+type Timeframe = "ALL" | "TODAY" | "LAST_12_HOURS" | "LAST_3_HOURS" | "THIS_WEEK" | "THIS_MONTH"
 
 const statuses = ["ALL", "PENDING", "PREPARING", "READY", "COMPLETED", "CANCELLED"]
+const timeframeOptions: { value: Timeframe; label: string }[] = [
+  { value: "ALL", label: "All" },
+  { value: "THIS_MONTH", label: "This month" },
+  { value: "THIS_WEEK", label: "This week" },
+  { value: "TODAY", label: "Today" },
+  { value: "LAST_12_HOURS", label: "Last 12 hours" },
+  { value: "LAST_3_HOURS", label: "Last 3 hours" },
+]
 
 export default function OrdersPage() {
+  const { data: session, status: sessionStatus } = useSession()
+  const { formatCurrency } = useCurrency()
+  const { toast } = useToast()
+  
+  const [loading, setLoading] = useState(true)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [statusCounts, setStatusCounts] = useState<StatusCounts>({
+    PENDING: 0,
+    PREPARING: 0,
+    READY: 0,
+    COMPLETED: 0,
+    CANCELLED: 0,
+  })
   const [activeStatus, setActiveStatus] = useState("ALL")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedOrder, setSelectedOrder] = useState<typeof mockOrders[0] | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [timeframe, setTimeframe] = useState<Timeframe>("ALL")
 
-  const filteredOrders = mockOrders.filter((order) => {
+  // Get cafeId from session
+  const staffProfiles = (session?.user as any)?.staffProfiles || []
+  const cafeId = staffProfiles[0]?.cafeId || ""
+
+  const fetchOrders = useCallback(async (showRefreshing = false) => {
+    if (!cafeId) return
+    
+    if (showRefreshing) setRefreshing(true)
+    
+    try {
+      const params = new URLSearchParams({ cafeId })
+      if (activeStatus && activeStatus !== "ALL") params.append("status", activeStatus)
+      if (timeframe && timeframe !== "ALL") params.append("timeframe", timeframe)
+
+      const res = await fetch(`/api/dashboard/orders?${params.toString()}`)
+      if (res.ok) {
+        const data = await res.json()
+        setOrders(data.orders)
+        setStatusCounts(data.counts)
+      }
+    } catch (error) {
+      console.error("Failed to fetch orders:", error)
+    }
+    setLoading(false)
+    setRefreshing(false)
+  }, [cafeId, activeStatus, timeframe])
+  
+  const handleRefresh = () => {
+    fetchOrders(true)
+  }
+
+  useEffect(() => {
+    if (sessionStatus === "loading") return
+    
+    if (cafeId) {
+      fetchOrders()
+      // Refresh every 10 seconds for real-time updates
+      const interval = setInterval(() => fetchOrders(), 10000)
+      return () => clearInterval(interval)
+    } else {
+      setLoading(false)
+    }
+  }, [cafeId, sessionStatus, fetchOrders])
+
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    setUpdatingOrder(orderId)
+    try {
+      const res = await fetch('/api/dashboard/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status: newStatus }),
+      })
+      
+      if (res.ok) {
+        toast({ title: "Success", description: `Order updated to ${newStatus}` })
+        fetchOrders()
+      } else {
+        toast({ title: "Error", description: "Failed to update order", variant: "destructive" })
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update order", variant: "destructive" })
+    }
+    setUpdatingOrder(null)
+  }
+
+  const filteredOrders = orders.filter((order) => {
     const matchesStatus = activeStatus === "ALL" || order.status === activeStatus
     const matchesSearch = !searchQuery || 
       order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -86,18 +149,58 @@ export default function OrdersPage() {
     return matchesStatus && matchesSearch
   })
 
-  const ordersByStatus = {
-    PENDING: mockOrders.filter(o => o.status === "PENDING").length,
-    PREPARING: mockOrders.filter(o => o.status === "PREPARING").length,
-    READY: mockOrders.filter(o => o.status === "READY").length,
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60000)
+    if (minutes < 1) return "Just now"
+    if (minutes === 1) return "1 min ago"
+    if (minutes < 60) return `${minutes} mins ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours === 1) return "1 hour ago"
+    return `${hours} hours ago`
+  }
+
+  if (loading || sessionStatus === "loading") {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-espresso-600" />
+      </div>
+    )
+  }
+
+  if (!cafeId) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <Coffee className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-lg font-semibold mb-2">No Cafe Found</h2>
+            <p className="text-muted-foreground">
+              You need to be associated with a cafe to view orders.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
+      <div className="flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-bold text-espresso-950 font-display">Orders</h1>
         <p className="text-muted-foreground">Manage and track all orders</p>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw className={cn("w-4 h-4 mr-2", refreshing && "animate-spin")} />
+          Refresh
+        </Button>
       </div>
 
       {/* Quick Stats */}
@@ -108,7 +211,7 @@ export default function OrdersPage() {
               <Clock className="w-6 h-6 text-yellow-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-yellow-900">{ordersByStatus.PENDING}</p>
+              <p className="text-2xl font-bold text-yellow-900">{statusCounts.PENDING}</p>
               <p className="text-sm text-yellow-700">Pending</p>
             </div>
           </CardContent>
@@ -119,7 +222,7 @@ export default function OrdersPage() {
               <Coffee className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-blue-900">{ordersByStatus.PREPARING}</p>
+              <p className="text-2xl font-bold text-blue-900">{statusCounts.PREPARING}</p>
               <p className="text-sm text-blue-700">Preparing</p>
             </div>
           </CardContent>
@@ -130,7 +233,7 @@ export default function OrdersPage() {
               <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-green-900">{ordersByStatus.READY}</p>
+              <p className="text-2xl font-bold text-green-900">{statusCounts.READY}</p>
               <p className="text-sm text-green-700">Ready</p>
             </div>
           </CardContent>
@@ -148,7 +251,7 @@ export default function OrdersPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {statuses.map((status) => (
             <Button
               key={status}
@@ -157,6 +260,23 @@ export default function OrdersPage() {
               onClick={() => setActiveStatus(status)}
             >
               {status === "ALL" ? "All" : status.charAt(0) + status.slice(1).toLowerCase()}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Timeframe Filters */}
+      <div className="flex gap-2 items-center flex-wrap">
+        <span className="text-sm text-muted-foreground">Timeframe:</span>
+        <div className="flex gap-2 flex-wrap">
+          {timeframeOptions.map((option) => (
+            <Button
+              key={option.value}
+              variant={timeframe === option.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTimeframe(option.value)}
+            >
+              {option.label}
             </Button>
           ))}
         </div>
@@ -204,18 +324,41 @@ export default function OrdersPage() {
                 <span className="font-bold">{formatCurrency(order.total)}</span>
                 <div className="flex gap-2">
                   {order.status === "PENDING" && (
-                    <Button size="sm" variant="outline">
-                      Start Preparing
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      disabled={updatingOrder === order.id}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        updateOrderStatus(order.id, "PREPARING")
+                      }}
+                    >
+                      {updatingOrder === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Preparing"}
                     </Button>
                   )}
                   {order.status === "PREPARING" && (
-                    <Button size="sm" variant="success">
-                      Mark Ready
+                    <Button 
+                      size="sm" 
+                      variant="success"
+                      disabled={updatingOrder === order.id}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        updateOrderStatus(order.id, "READY")
+                      }}
+                    >
+                      {updatingOrder === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Mark Ready"}
                     </Button>
                   )}
                   {order.status === "READY" && (
-                    <Button size="sm">
-                      Complete
+                    <Button 
+                      size="sm"
+                      disabled={updatingOrder === order.id}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        updateOrderStatus(order.id, "COMPLETED")
+                      }}
+                    >
+                      {updatingOrder === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Complete"}
                     </Button>
                   )}
                 </div>
@@ -230,21 +373,12 @@ export default function OrdersPage() {
           <CardContent className="p-12 text-center">
             <Coffee className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-lg font-medium">No orders found</p>
-            <p className="text-muted-foreground">Try adjusting your filters</p>
+            <p className="text-muted-foreground">
+              {orders.length === 0 ? "No orders yet. Orders will appear here when created from the POS." : "Try adjusting your filters"}
+            </p>
           </CardContent>
         </Card>
       )}
     </div>
   )
 }
-
-function formatTimeAgo(date: Date): string {
-  const minutes = Math.floor((Date.now() - date.getTime()) / 60000)
-  if (minutes < 1) return "Just now"
-  if (minutes === 1) return "1 min ago"
-  if (minutes < 60) return `${minutes} mins ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours === 1) return "1 hour ago"
-  return `${hours} hours ago`
-}
-

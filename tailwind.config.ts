@@ -91,7 +91,7 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-work-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-geist-mono)", "monospace"],
-        display: ["var(--font-scandia)", "var(--font-cabinet)", "system-ui"],
+        display: ["var(--font-outfit-heading)", "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "1.5rem", // 24px

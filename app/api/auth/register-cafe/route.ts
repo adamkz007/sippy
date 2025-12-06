@@ -13,12 +13,29 @@ const registerCafeSchema = z.object({
     .string()
     .min(2)
     .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
+  cafeAddress: z.string().min(5, "Address is required"),
+  cafeCity: z.string().optional().nullable(),
+  cafeLatitude: z.number().optional().nullable(),
+  cafeLongitude: z.number().optional().nullable(),
+  cafePlaceId: z.string().optional().nullable(),
 })
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { email, password, name, phone, cafeName, cafeSlug } = registerCafeSchema.parse(body)
+    const { 
+      email, 
+      password, 
+      name, 
+      phone, 
+      cafeName, 
+      cafeSlug,
+      cafeAddress,
+      cafeCity,
+      cafeLatitude,
+      cafeLongitude,
+      cafePlaceId,
+    } = registerCafeSchema.parse(body)
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -66,6 +83,11 @@ export async function POST(req: Request) {
           slug: cafeSlug,
           email,
           phone,
+          address: cafeAddress,
+          city: cafeCity || null,
+          latitude: cafeLatitude || null,
+          longitude: cafeLongitude || null,
+          placeId: cafePlaceId || null,
         },
       })
 
