@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Nory.ai Inspired Palette (Wild Sand / Crystalsong Blue / Back in Black) */
+    --background: 35 13% 89%; /* #E7E4DE Wild Sand */
+    --foreground: 264 16% 9%; /* #16141C Back in Black */
+    
+    --card: 0 0% 100%;
+    --card-foreground: 264 16% 9%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 264 16% 9%;
+    
+    --primary: 180 44% 50%; /* #4FB3B3 Crystalsong Blue */
+    --primary-foreground: 0 0% 0%; /* Black text on Teal */
+    
+    --secondary: 325 57% 46%; /* #BB3381 Very Berry */
+    --secondary-foreground: 0 0% 100%; /* White text on Berry */
+    
+    --tertiary: 41 86% 50%; /* #EEAA11 Groovy Giraffe */
+    --tertiary-foreground: 0 0% 0%; /* Black text on Giraffe */
+    
+    --muted: 35 10% 85%;
+    --muted-foreground: 35 5% 40%;
+    
+    --accent: 41 86% 50%; /* Tertiary as accent? or Keep Teal? User said Tertiary is #EEAA11. */
+    --accent-foreground: 0 0% 0%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 35 13% 80%;
+    --input: 35 13% 80%;
+    --ring: 180 44% 50%;
+    
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: 264 16% 9%;
+    --foreground: 35 13% 89%;
+    
+    --card: 264 16% 12%;
+    --card-foreground: 35 13% 89%;
+    
+    --popover: 264 16% 12%;
+    --popover-foreground: 35 13% 89%;
+    
+    --primary: 180 44% 50%; 
+    --primary-foreground: 0 0% 0%;
+    
+    --secondary: 325 57% 46%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --tertiary: 41 86% 50%;
+    --tertiary-foreground: 0 0% 0%;
+    
+    --muted: 264 16% 15%;
+    --muted-foreground: 264 5% 60%;
+    
+    --accent: 41 86% 50%;
+    --accent-foreground: 0 0% 0%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 264 16% 20%;
+    --input: 264 16% 20%;
+    --ring: 180 44% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-scandia), var(--font-cabinet), sans-serif;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/40;
+}
+
+/* POS specific styles */
+.pos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .pos-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+/* Smooth animations */
+.animate-in {
+  animation: animateIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); /* Custom ease */
+}
+
+@keyframes animateIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Nory-style Gradients/Utilities */
+.bg-stone {
+  background-color: #f7f7f5;
+}
+
+.text-carbon {
+  color: #1a1a17;
+}
+
+.bg-lime {
+  background-color: #ccf857;
+}
+
+/* Utility for glassmorphism */
+.glass {
+  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm;
+}
+
+.dark .glass {
+  @apply bg-black/40 backdrop-blur-md border border-white/10 shadow-sm;
+}
+
+
