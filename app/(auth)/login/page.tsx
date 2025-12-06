@@ -238,8 +238,10 @@ function LoginContent() {
           <div className="mt-8 p-4 rounded-lg bg-muted/50 border">
             <p className="text-sm font-medium mb-2">Demo Credentials</p>
             <p className="text-xs text-muted-foreground">
-              Email: demo@sippy.coffee<br />
-              Password: demo1234
+              Cafe Email: demo@sippy.coffee<br />
+              Password: demo1234<br />
+              Customer Email: alex@example.com<br />
+              Password: customer123
             </p>
           </div>
         </div>

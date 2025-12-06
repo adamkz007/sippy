@@ -152,7 +152,9 @@ export default function HomePage() {
     const fetchCafes = async () => {
       setCafesLoading(true)
       try {
-        const params = new URLSearchParams({ limit: "5" })
+        // If we don't have location (either not granted or denied), fetch a larger list so users still see all cafes
+        const limit = latitude && longitude ? "5" : "50"
+        const params = new URLSearchParams({ limit })
         if (latitude && longitude) {
           params.append("lat", latitude.toString())
           params.append("lng", longitude.toString())
@@ -171,7 +173,7 @@ export default function HomePage() {
     }
 
     fetchCafes()
-  }, [latitude, longitude])
+  }, [latitude, longitude, permissionState])
 
   const points = profile?.loyalty?.pointsBalance || 0
   const voucherCount = profile?.vouchers?.length || 0

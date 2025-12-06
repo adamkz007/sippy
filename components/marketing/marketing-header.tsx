@@ -67,7 +67,9 @@ export function MarketingHeader() {
             asChild
             className="bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full px-6 h-10 shadow-lg shadow-secondary/20 transition-transform hover:scale-105 active:scale-95 font-bold"
           >
-            <Link href="/register">Let's talk</Link>
+            <Link href="mailto:adamkz.x@gmail.com?subject=I%20want%20to%20know%20more%20about%20Sippy">
+              Let's talk
+            </Link>
           </Button>
         </div>
       </header>

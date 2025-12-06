@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 const plans = [
   {
     name: "Starter",
-    price: "RM149",
+    price: "RM99",
     cadence: "per month",
     description: "Ideal for new locations getting off spreadsheets.",
     features: [
@@ -23,7 +23,7 @@ const plans = [
   },
   {
     name: "Growth",
-    price: "RM349",
+    price: "RM149",
     cadence: "per month",
     description: "For busy cafes that need automation and loyalty.",
     features: [
@@ -35,20 +35,6 @@ const plans = [
     ],
     popular: true,
     cta: "Talk to sales",
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    cadence: "let's design it",
-    description: "Multi-location teams with governance & integrations.",
-    features: [
-      "All Growth features",
-      "API access & data warehouse sync",
-      "Role-based permissions & SSO",
-      "Menu and pricing controls by region",
-      "Dedicated CSM & on-site training",
-    ],
-    cta: "Let's talk",
   },
 ]
 
@@ -103,7 +89,7 @@ export default function PricingPage() {
           </p>
         </section>
 
-        <section className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+        <section className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
           {plans.map((plan) => (
             <div
               key={plan.name}
