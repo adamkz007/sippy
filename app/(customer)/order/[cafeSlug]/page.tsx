@@ -159,7 +159,7 @@ export default function OnlineOrderPage() {
       </div>
 
       {/* Loyalty Banner */}
-      <div className="bg-gradient-to-r from-matcha-500 to-matcha-600 text-white py-3">
+      <div className="bg-gradient-to-r from-espresso-700 to-espresso-900 text-cream-100 py-3">
         <div className="container mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Gift className="w-5 h-5" />

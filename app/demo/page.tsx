@@ -176,7 +176,7 @@ export default function DemoPage() {
                   className="relative p-4 rounded-xl border bg-white hover:border-espresso-300 hover:shadow-md transition-all text-left group"
                 >
                   {product.popular && (
-                    <Badge className="absolute -top-2 -right-2 bg-matcha-500">
+                    <Badge className="absolute -top-2 -right-2 bg-espresso-700">
                       Popular
                     </Badge>
                   )}

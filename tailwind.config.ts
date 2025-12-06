@@ -47,58 +47,45 @@ const config: Config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        // Sippy brand colors - Nory.ai Inspired Palette
-        espresso: {
-          50: "#f9f8f7", 
-          100: "#efedea",
-          200: "#e7e4de", // Wild Sand (Background)
-          300: "#cfcac3",
-          400: "#a8a198",
-          500: "#857d72",
-          600: "#635d54",
-          700: "#46413b",
-          800: "#2c2925",
-          900: "#16141c", // Back in Black
-          950: "#0d0c11",
+        // Sippy brand colors - Warm Peach & Espresso Palette
+        cream: {
+          50: "#fffdf9",
+          100: "#fef8ec",
+          200: "#fde0b6", // Primary: Peach Cream
+          300: "#fcd48f",
+          400: "#f9be5a",
+          500: "#f5a623",
+          600: "#d9870e",
+          700: "#b5690a",
+          800: "#924e0d",
+          900: "#78400f",
+          950: "#452107",
         },
-        matcha: {
-          50: "#eef9f9",
-          100: "#d6f0f0",
-          200: "#b3e2e2",
-          300: "#84d0d0",
-          400: "#4fb3b3", // Crystalsong Blue (Primary Accent)
-          500: "#369696",
-          600: "#2a7676",
-          700: "#235f5f",
-          800: "#1e4c4c",
-          900: "#1b4040",
-          950: "#0e2424",
+        espresso: {
+          50: "#fdf7f3",
+          100: "#f9ebe1",
+          200: "#f3d5c2",
+          300: "#ebb897",
+          400: "#e19265",
+          500: "#d87240",
+          600: "#c85a30",
+          700: "#a64528",
+          800: "#863926",
+          900: "#6a320d", // Secondary: Espresso Brown
+          950: "#3b1807",
         },
         latte: {
-          50: "#fafafa",
-          100: "#f4f4f5",
-          200: "#e4e4e7",
-          300: "#d4d4d8",
-          400: "#a1a1aa",
-          500: "#71717a",
-          600: "#52525b",
-          700: "#3f3f46",
-          800: "#27272a",
-          900: "#18181b",
-          950: "#09090b",
-        },
-        // New Palette Colors
-        giraffe: {
-          DEFAULT: "#EEAA11", // Groovy Giraffe
-          foreground: "#16141C",
-        },
-        berry: {
-          DEFAULT: "#BB3381", // Very Berry
-          foreground: "#FFFFFF",
-        },
-        orchid: {
-          DEFAULT: "#3F1D50", // Obsidian Orchid
-          foreground: "#FFFFFF",
+          50: "#fefdfb",
+          100: "#fcf9f4",
+          200: "#f8f0e5",
+          300: "#f2e3d0",
+          400: "#e8cca8",
+          500: "#dbb27e",
+          600: "#c8935a",
+          700: "#a6724a",
+          800: "#865a40",
+          900: "#6e4a37",
+          950: "#3a251b",
         },
       },
       fontFamily: {

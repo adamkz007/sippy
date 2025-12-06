@@ -14,7 +14,7 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors duration-300",
         ghost: "hover:bg-stone-100 hover:text-stone-900 transition-colors duration-200",
         link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-matcha-500 text-white hover:bg-matcha-600 shadow-sm hover:shadow-md transition-all duration-200",
+        success: "bg-espresso-700 text-white hover:bg-espresso-800 shadow-sm hover:shadow-md transition-all duration-200",
       },
       size: {
         default: "h-12 px-6 py-2 rounded-full",

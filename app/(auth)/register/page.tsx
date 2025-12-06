@@ -139,7 +139,7 @@ export default function RegisterPage() {
       <div className={`hidden lg:flex flex-1 items-center justify-center p-12 relative overflow-hidden transition-colors duration-500 ${
         accountType === "cafe" 
           ? "bg-gradient-to-br from-amber-700 to-amber-900" 
-          : "bg-gradient-to-br from-matcha-700 to-matcha-900"
+          : "bg-gradient-to-br from-espresso-700 to-espresso-900"
       }`}>
         {/* Background pattern */}
         <div className="absolute inset-0">

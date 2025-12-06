@@ -106,7 +106,7 @@ export default function DashboardLayout({
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-full text-sm font-medium transition-all duration-200",
                     isActive 
-                      ? "bg-matcha-400 text-carbon shadow-lg shadow-matcha-400/20 font-bold" 
+                      ? "bg-cream-200 text-espresso-900 shadow-lg shadow-cream-200/20 font-bold" 
                       : "text-stone-400 hover:bg-stone-800/50 hover:text-white"
                   )}
                 >

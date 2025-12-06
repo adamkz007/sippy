@@ -84,7 +84,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 relative z-10">
         <div className="w-full max-w-md">
           <Link href="/" className="flex items-center gap-2 mb-12">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-espresso-500 to-espresso-700 flex items-center justify-center">
@@ -101,29 +101,29 @@ export default function LoginPage() {
           </p>
 
           {/* Account Type Tabs */}
-          <div className="flex mb-8 p-1 bg-muted rounded-xl">
+          <div className="flex mb-8 p-1 bg-muted rounded-xl relative z-20">
             <button
               type="button"
               onClick={() => setAccountType("customer")}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                 accountType === "customer"
                   ? "bg-white text-espresso-900 shadow-sm"
                   : "text-muted-foreground hover:text-espresso-700"
               }`}
             >
-              <User className="w-4 h-4" />
+              <User className="w-4 h-4 pointer-events-none" />
               Customer
             </button>
             <button
               type="button"
               onClick={() => setAccountType("cafe")}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                 accountType === "cafe"
                   ? "bg-white text-espresso-900 shadow-sm"
                   : "text-muted-foreground hover:text-espresso-700"
               }`}
             >
-              <Store className="w-4 h-4" />
+              <Store className="w-4 h-4 pointer-events-none" />
               Cafe Owner
             </button>
           </div>
@@ -132,7 +132,7 @@ export default function LoginPage() {
           <Button
             type="button"
             variant="outline"
-            className="w-full mb-6 h-12 text-base"
+            className="w-full mb-6 h-12 text-base bg-white border-2 border-espresso-200 text-espresso-900 hover:bg-espresso-50 hover:border-espresso-300 hover:text-espresso-950"
             onClick={handleGoogleSignIn}
             disabled={isGoogleLoading}
           >
@@ -248,7 +248,7 @@ export default function LoginPage() {
       {/* Right side - Decorative */}
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-espresso-900 to-espresso-950 items-center justify-center p-12 relative overflow-hidden">
         {/* Background pattern */}
-        <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-0 left-0 w-96 h-96 bg-white/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
         </div>

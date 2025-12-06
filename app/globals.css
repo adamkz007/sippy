@@ -4,72 +4,72 @@
 
 @layer base {
   :root {
-    /* Nory.ai Inspired Palette (Wild Sand / Crystalsong Blue / Back in Black) */
-    --background: 35 13% 89%; /* #E7E4DE Wild Sand */
-    --foreground: 264 16% 9%; /* #16141C Back in Black */
+    /* Warm Palette: Peach Cream (#FDE0B6) & Espresso Brown (#6A320D) */
+    --background: 35 70% 96%; /* Light cream background */
+    --foreground: 24 78% 18%; /* Dark brown text */
     
     --card: 0 0% 100%;
-    --card-foreground: 264 16% 9%;
+    --card-foreground: 24 78% 18%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 264 16% 9%;
+    --popover-foreground: 24 78% 18%;
     
-    --primary: 180 44% 50%; /* #4FB3B3 Crystalsong Blue */
-    --primary-foreground: 0 0% 0%; /* Black text on Teal */
+    --primary: 35 95% 85%; /* #FDE0B6 Peach Cream */
+    --primary-foreground: 24 78% 18%; /* Dark brown text on cream */
     
-    --secondary: 325 57% 46%; /* #BB3381 Very Berry */
-    --secondary-foreground: 0 0% 100%; /* White text on Berry */
+    --secondary: 24 78% 23%; /* #6A320D Espresso Brown */
+    --secondary-foreground: 35 95% 95%; /* Light cream text on brown */
     
-    --tertiary: 41 86% 50%; /* #EEAA11 Groovy Giraffe */
-    --tertiary-foreground: 0 0% 0%; /* Black text on Giraffe */
+    --tertiary: 24 60% 40%; /* Lighter brown accent */
+    --tertiary-foreground: 0 0% 100%;
     
-    --muted: 35 10% 85%;
-    --muted-foreground: 35 5% 40%;
+    --muted: 35 40% 90%;
+    --muted-foreground: 24 30% 45%;
     
-    --accent: 41 86% 50%; /* Tertiary as accent? or Keep Teal? User said Tertiary is #EEAA11. */
-    --accent-foreground: 0 0% 0%;
+    --accent: 24 78% 23%; /* Secondary as accent */
+    --accent-foreground: 35 95% 95%;
     
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 35 13% 80%;
-    --input: 35 13% 80%;
-    --ring: 180 44% 50%;
+    --border: 35 50% 82%;
+    --input: 35 50% 82%;
+    --ring: 24 78% 23%;
     
     --radius: 1rem;
   }
 
   .dark {
-    --background: 264 16% 9%;
-    --foreground: 35 13% 89%;
+    --background: 24 50% 8%;
+    --foreground: 35 95% 90%;
     
-    --card: 264 16% 12%;
-    --card-foreground: 35 13% 89%;
+    --card: 24 45% 12%;
+    --card-foreground: 35 95% 90%;
     
-    --popover: 264 16% 12%;
-    --popover-foreground: 35 13% 89%;
+    --popover: 24 45% 12%;
+    --popover-foreground: 35 95% 90%;
     
-    --primary: 180 44% 50%; 
-    --primary-foreground: 0 0% 0%;
+    --primary: 35 95% 85%; /* #FDE0B6 Peach Cream */
+    --primary-foreground: 24 78% 18%;
     
-    --secondary: 325 57% 46%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 24 78% 35%; /* Lighter brown for dark mode */
+    --secondary-foreground: 35 95% 95%;
     
-    --tertiary: 41 86% 50%;
-    --tertiary-foreground: 0 0% 0%;
+    --tertiary: 24 60% 50%;
+    --tertiary-foreground: 0 0% 100%;
     
-    --muted: 264 16% 15%;
-    --muted-foreground: 264 5% 60%;
+    --muted: 24 40% 15%;
+    --muted-foreground: 35 30% 60%;
     
-    --accent: 41 86% 50%;
-    --accent-foreground: 0 0% 0%;
+    --accent: 35 95% 85%;
+    --accent-foreground: 24 78% 18%;
     
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
     
-    --border: 264 16% 20%;
-    --input: 264 16% 20%;
-    --ring: 180 44% 50%;
+    --border: 24 40% 20%;
+    --input: 24 40% 20%;
+    --ring: 35 95% 85%;
   }
 }
 
@@ -155,4 +155,59 @@
   @apply bg-black/40 backdrop-blur-md border border-white/10 shadow-sm;
 }
 
+/* Safe area for iOS devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Slide in animations */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-from-right {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+.slide-in-from-bottom {
+  animation: slideInFromBottom 0.3s ease-out;
+}
+
+/* Customer app specific styles */
+.customer-app {
+  max-width: 28rem; /* 448px - max width for mobile layout */
+  margin: 0 auto;
+}
 
