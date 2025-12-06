@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { generateVoucherCode } from "@/lib/utils"
 
+export const dynamic = 'force-dynamic'
+
 const claimVoucherSchema = z.object({
   customerId: z.string(),
   type: z.enum(["FREE_DRINK", "PERCENTAGE_OFF", "FIXED_AMOUNT", "FREE_UPGRADE"]),

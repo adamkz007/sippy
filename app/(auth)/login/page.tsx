@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/use-toast"
 
 type AccountType = "customer" | "cafe"
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -82,9 +82,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex relative">
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 relative z-10">
+      <div className="flex-1 flex items-center justify-center p-8 relative z-20">
         <div className="w-full max-w-md">
           <Link href="/" className="flex items-center gap-2 mb-12">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-espresso-500 to-espresso-700 flex items-center justify-center">
@@ -101,7 +101,7 @@ export default function LoginPage() {
           </p>
 
           {/* Account Type Tabs */}
-          <div className="flex mb-8 p-1 bg-muted rounded-xl relative z-20">
+          <div className="flex mb-8 p-1 bg-muted rounded-xl relative z-30">
             <button
               type="button"
               onClick={() => setAccountType("customer")}
@@ -246,7 +246,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right side - Decorative */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-espresso-900 to-espresso-950 items-center justify-center p-12 relative overflow-hidden">
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-espresso-900 to-espresso-950 items-center justify-center p-12 relative overflow-hidden z-10">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-0 left-0 w-96 h-96 bg-white/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
@@ -276,5 +276,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-espresso-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }

@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { generateOrderNumber, calculateLoyaltyTier } from "@/lib/utils"
 
+export const dynamic = 'force-dynamic'
+
 const orderItemSchema = z.object({
   productId: z.string(),
   name: z.string(),

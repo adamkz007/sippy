@@ -5,7 +5,7 @@ export function MarketingFooter() {
   return (
     <footer className="bg-white border-t border-border/50 py-16 px-4">
       <div className="container mx-auto max-w-6xl">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-12">
+        <div className="flex flex-col lg:flex-row justify-between items-start gap-12">
           <div className="max-w-xs">
             <Link href="/" className="flex items-center gap-2.5 mb-6">
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
@@ -18,7 +18,7 @@ export function MarketingFooter() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-20">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-10 gap-x-0 sm:gap-x-10 lg:gap-20 w-full">
             <div>
               <h4 className="font-bold text-foreground mb-4">Product</h4>
               <ul className="space-y-3 text-muted-foreground text-sm">
@@ -113,7 +113,7 @@ export function MarketingFooter() {
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-center mt-16 pt-8 border-t border-border/50 text-sm text-muted-foreground">
-          <p>© 2024 Sippy Inc. All rights reserved.</p>
+          <p>© 2025 Sippy Inc</p>
           <div className="flex gap-6 mt-4 md:mt-0">
             <Link href="/privacy-policy" className="hover:text-foreground">
               Privacy Policy
