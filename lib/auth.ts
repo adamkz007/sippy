@@ -70,12 +70,18 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       // For Google sign-in, handle user creation/linking
       if (account?.provider === "google") {
         try {
+          const email = user.email || (profile as any)?.email
+          if (!email) return true
+
+          const googleName = user.name || (profile as any)?.name || null
+          const googleImage = user.image || (profile as any)?.picture || null
+
           const existingUser = await prisma.user.findUnique({
-            where: { email: user.email! },
+            where: { email },
             include: {
               accounts: true,
               customer: true,
@@ -87,6 +93,16 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (existingUser) {
+            if ((!existingUser.name && googleName) || (!existingUser.image && googleImage)) {
+              await prisma.user.update({
+                where: { id: existingUser.id },
+                data: {
+                  ...(!existingUser.name && googleName ? { name: googleName } : {}),
+                  ...(!existingUser.image && googleImage ? { image: googleImage } : {}),
+                },
+              })
+            }
+
             // User exists - check if they need a customer profile
             // (for users signing in as customers who don't have a profile yet)
             if (!existingUser.customer && existingUser.staffProfiles.length === 0) {
@@ -102,10 +118,19 @@ export const authOptions: NextAuthOptions = {
 
           // New user will be created by the adapter
           // We'll create a customer profile after user creation
+          if (user.id && (googleName || googleImage)) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                ...(googleName ? { name: googleName } : {}),
+                ...(googleImage ? { image: googleImage } : {}),
+              },
+            })
+          }
           return true
         } catch (error) {
           console.error("Error in signIn callback:", error)
-          return false
+          return true
         }
       }
       return true
@@ -119,8 +144,8 @@ export const authOptions: NextAuthOptions = {
         token.staffProfiles = user.staffProfiles
       }
 
-      // For Google sign-in, fetch user data from database
-      if (account?.provider === "google" && token.email) {
+      // For Google sign-in and any sessions missing an id, fetch user data from database
+      if ((account?.provider === "google" || !token.id) && token.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
           include: {
@@ -137,6 +162,8 @@ export const authOptions: NextAuthOptions = {
           token.role = dbUser.role
           token.customerId = dbUser.customer?.id
           token.staffProfiles = dbUser.staffProfiles
+          token.name = token.name || dbUser.name || undefined
+          ;(token as any).picture = (token as any).picture || dbUser.image || undefined
         }
       }
 
@@ -169,4 +196,3 @@ export const authOptions: NextAuthOptions = {
     },
   },
 }
-

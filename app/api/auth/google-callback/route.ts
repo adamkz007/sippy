@@ -34,6 +34,16 @@ export async function POST(req: Request) {
     })
 
     if (existingUser) {
+      if ((!existingUser.name && data.name) || (!existingUser.image && data.image)) {
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            ...(!existingUser.name && data.name ? { name: data.name } : {}),
+            ...(!existingUser.image && data.image ? { image: data.image } : {}),
+          },
+        })
+      }
+
       // User exists, check if they need profile setup
       if (data.accountType === "customer" && !existingUser.customer) {
         // Create customer profile for existing user
@@ -188,4 +198,3 @@ export async function POST(req: Request) {
     )
   }
 }
-

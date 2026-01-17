@@ -118,6 +118,7 @@ model Cafe {
   orders      Order[]
   tables      Table[]
   pointTransactions PointTransaction[]
+  cafeCustomers CafeCustomer[]
 
   @@map("cafes")
 }
@@ -386,8 +387,30 @@ model Customer {
   pointTransactions PointTransaction[]
   vouchers         Voucher[]
   coffeeProfile    CoffeeProfile?
+  cafeCustomers    CafeCustomer[]
 
   @@map("customers")
+}
+
+model CafeCustomer {
+  id         String             @id @default(cuid())
+  cafeId     String
+  customerId String?
+  phone      String?
+  source     CafeCustomerSource @default(SCAN)
+  createdAt  DateTime           @default(now())
+
+  cafe     Cafe      @relation(fields: [cafeId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([cafeId, customerId])
+  @@unique([cafeId, phone])
+  @@map("cafe_customers")
+}
+
+enum CafeCustomerSource {
+  SCAN
+  PHONE
 }
 
 model PointTransaction {
@@ -473,4 +496,3 @@ enum VoucherStatus {
   EXPIRED
   CANCELLED
 }
-

@@ -1,8 +1,11 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useEffect, useCallback, useMemo, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 import { 
+  Camera,
+  Phone,
+  QrCode,
   TrendingUp, 
   TrendingDown, 
   DollarSign, 
@@ -16,6 +19,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
 import { useCurrency } from "@/components/currency-context"
 
@@ -47,6 +54,7 @@ interface TopProduct {
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const { formatCurrency } = useCurrency()
+  const { toast } = useToast()
   
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
@@ -63,6 +71,19 @@ export default function DashboardPage() {
   // Get cafeId from session
   const staffProfiles = (session?.user as any)?.staffProfiles || []
   const cafeId = staffProfiles[0]?.cafeId || ""
+
+  const [scanOpen, setScanOpen] = useState(false)
+  const [scanTab, setScanTab] = useState<"qr" | "phone">("qr")
+  const [phoneInput, setPhoneInput] = useState("")
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [lookupResult, setLookupResult] = useState<{ found: boolean; customerId?: string; name?: string | null; phone?: string } | null>(null)
+  const [recording, setRecording] = useState(false)
+
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const rafRef = useRef<number | null>(null)
+  const [qrError, setQrError] = useState<string | null>(null)
+  const [qrSupported, setQrSupported] = useState(false)
 
   const fetchDashboardData = useCallback(async () => {
     if (!cafeId) return
@@ -81,6 +102,161 @@ export default function DashboardPage() {
     setLoading(false)
   }, [cafeId])
 
+  const stopQr = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+  }, [])
+
+  const normalizePhone = useCallback((phone: string) => {
+    return phone.replace(/[\s\-\(\)]/g, '')
+  }, [])
+
+  const recordMember = useCallback(async (payload: { customerId?: string; phone?: string }) => {
+    if (!cafeId) return
+    setRecording(true)
+    try {
+      const res = await fetch('/api/dashboard/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cafeId, ...payload }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || 'Failed to record member')
+      }
+
+      setScanOpen(false)
+      setPhoneInput("")
+      setLookupResult(null)
+      toast({
+        title: "Member recorded",
+        description: "They’ll now appear in Customers.",
+      })
+    } catch (e: any) {
+      toast({
+        title: "Could not record member",
+        description: e?.message || "Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setRecording(false)
+    }
+  }, [cafeId, toast])
+
+  const parseQrValue = useCallback((raw: string): { customerId?: string; phone?: string } | null => {
+    const trimmed = raw.trim()
+    if (!trimmed) return null
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      try {
+        const obj = JSON.parse(trimmed)
+        if (obj?.customerId && typeof obj.customerId === "string") return { customerId: obj.customerId }
+        if (obj?.phone && typeof obj.phone === "string") return { phone: normalizePhone(obj.phone) }
+      } catch {}
+    }
+
+    const phone = normalizePhone(trimmed)
+    const phoneLike = /^(\+?\d{7,15})$/.test(phone)
+    if (phoneLike) return { phone }
+    return { customerId: trimmed }
+  }, [normalizePhone])
+
+  const canUseQr = useMemo(() => {
+    return typeof window !== "undefined" && "BarcodeDetector" in window && typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia
+  }, [])
+
+  const startQr = useCallback(async () => {
+    setQrError(null)
+    stopQr()
+
+    if (!canUseQr) {
+      setQrSupported(false)
+      setQrError("QR scanning isn’t supported in this browser.")
+      return
+    }
+
+    setQrSupported(true)
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      })
+      streamRef.current = stream
+      if (!videoRef.current) return
+      videoRef.current.srcObject = stream
+      await videoRef.current.play()
+
+      const BarcodeDetectorCtor = (window as any).BarcodeDetector
+      const detector = new BarcodeDetectorCtor({ formats: ["qr_code"] })
+
+      const tick = async () => {
+        if (!videoRef.current) return
+        try {
+          const barcodes = await detector.detect(videoRef.current)
+          const value = barcodes?.[0]?.rawValue
+          if (value) {
+            const parsed = parseQrValue(value)
+            if (parsed) {
+              stopQr()
+              await recordMember(parsed)
+              return
+            }
+          }
+        } catch (e: any) {
+          setQrError(e?.message || "Failed to scan QR.")
+        }
+        rafRef.current = requestAnimationFrame(tick)
+      }
+
+      rafRef.current = requestAnimationFrame(tick)
+    } catch (e: any) {
+      setQrError(e?.message || "Camera permission denied or unavailable.")
+    }
+  }, [canUseQr, parseQrValue, recordMember, stopQr])
+
+  const lookupByPhone = useCallback(async () => {
+    const normalized = normalizePhone(phoneInput)
+    if (!normalized) return
+    setLookupLoading(true)
+    setLookupResult(null)
+    try {
+      const res = await fetch(`/api/customers/lookup?phone=${encodeURIComponent(normalized)}`)
+      const data = await res.json().catch(() => null)
+      if (res.ok && data?.found && data?.customer?.id) {
+        setLookupResult({
+          found: true,
+          customerId: data.customer.id,
+          name: data.customer.name,
+          phone: data.customer.phone,
+        })
+      } else {
+        setLookupResult({ found: false, phone: data?.phone || normalized })
+      }
+    } catch (e) {
+      setLookupResult({ found: false, phone: normalized })
+    } finally {
+      setLookupLoading(false)
+    }
+  }, [normalizePhone, phoneInput])
+
+  const handleOpenScan = useCallback(() => {
+    setScanOpen(true)
+    setScanTab(canUseQr ? "qr" : "phone")
+    setPhoneInput("")
+    setLookupResult(null)
+    setQrError(null)
+  }, [canUseQr])
+
   useEffect(() => {
     if (status === "loading") return
     
@@ -90,6 +266,18 @@ export default function DashboardPage() {
       setLoading(false)
     }
   }, [cafeId, status, fetchDashboardData])
+
+  useEffect(() => {
+    if (!scanOpen) {
+      stopQr()
+      return
+    }
+    if (scanTab === "qr") {
+      startQr()
+    } else {
+      stopQr()
+    }
+  }, [scanOpen, scanTab, startQr, stopQr])
 
   // Format time ago
   const formatTimeAgo = (dateString: string) => {
@@ -136,13 +324,148 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-espresso-950 font-display">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back! Here&apos;s how your cafe is doing today.</p>
         </div>
-        <Button asChild>
-          <Link href="/pos">
-            <ShoppingBag className="w-4 h-4 mr-2" />
-            Open POS
-          </Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={handleOpenScan} className="h-11 px-5">
+            <QrCode className="w-4 h-4 mr-2" />
+            Scan member
+          </Button>
+          <Button asChild variant="outline" className="h-11">
+            <Link href="/pos">
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              Open POS
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      <Dialog open={scanOpen} onOpenChange={setScanOpen}>
+        <DialogContent onClose={() => setScanOpen(false)} className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Scan member</DialogTitle>
+            <DialogDescription>Scan a QR code or enter a phone number.</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <Tabs value={scanTab} onValueChange={(v) => setScanTab(v as any)}>
+              <TabsList className="w-full">
+                {canUseQr ? (
+                  <TabsTrigger value="qr" className="flex-1">
+                    <Camera className="w-4 h-4 mr-2" />
+                    QR scan
+                  </TabsTrigger>
+                ) : (
+                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground opacity-50 flex-1 cursor-not-allowed">
+                    <Camera className="w-4 h-4 mr-2" />
+                    QR scan
+                  </div>
+                )}
+                <TabsTrigger value="phone" className="flex-1">
+                  <Phone className="w-4 h-4 mr-2" />
+                  Phone
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="qr" className="space-y-3">
+                <div className="rounded-lg border overflow-hidden bg-black/5">
+                  <video ref={videoRef} className="w-full h-64 object-cover" playsInline muted />
+                </div>
+                {!qrSupported && (
+                  <p className="text-sm text-muted-foreground">
+                    QR scanning needs camera + browser support. Use Phone if unavailable.
+                  </p>
+                )}
+                {qrError && (
+                  <p className="text-sm text-red-600">{qrError}</p>
+                )}
+                <div className="flex items-center justify-between">
+                  <Button type="button" variant="outline" onClick={startQr} disabled={recording}>
+                    Retry camera
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Point the camera at the QR code.</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="phone" className="space-y-4">
+                <div className="space-y-2">
+                  <Input
+                    inputMode="tel"
+                    placeholder="Enter phone number"
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") lookupByPhone()
+                    }}
+                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    {["1","2","3","4","5","6","7","8","9","+","0","←"].map((key) => (
+                      <Button
+                        key={key}
+                        type="button"
+                        variant="outline"
+                        className="h-11"
+                        onClick={() => {
+                          if (key === "←") {
+                            setPhoneInput((v) => v.slice(0, -1))
+                            return
+                          }
+                          setPhoneInput((v) => `${v}${key}`)
+                        }}
+                      >
+                        {key}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button type="button" onClick={lookupByPhone} disabled={!phoneInput || lookupLoading}>
+                    {lookupLoading ? "Looking up..." : "Lookup"}
+                  </Button>
+                </div>
+
+                {lookupResult && (
+                  <div className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {lookupResult.found ? (
+                          <>
+                            <p className="font-medium">{lookupResult.name || "Customer"}</p>
+                            <p className="text-sm text-muted-foreground">{lookupResult.phone}</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-medium">Unregistered</p>
+                            <p className="text-sm text-muted-foreground">{lookupResult.phone}</p>
+                          </>
+                        )}
+                      </div>
+                      <Badge variant={lookupResult.found ? "success" : "secondary"} className="text-[10px]">
+                        {lookupResult.found ? "Found" : "New"}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScanOpen(false)} disabled={recording}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (!lookupResult) return
+                if (lookupResult.found && lookupResult.customerId) {
+                  recordMember({ customerId: lookupResult.customerId })
+                  return
+                }
+                if (lookupResult.phone) {
+                  recordMember({ phone: lookupResult.phone })
+                }
+              }}
+              disabled={recording || scanTab !== "phone" || !lookupResult}
+            >
+              Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

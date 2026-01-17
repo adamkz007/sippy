@@ -253,7 +253,7 @@ export default function ExplorePage() {
 
       {/* Cafe List */}
       {viewMode === "list" ? (
-        <div className="px-4 space-y-3 pb-4">
+        <div className="px-4 space-y-4 pb-4">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin text-espresso-400" />
@@ -285,7 +285,7 @@ export default function ExplorePage() {
                     !cafe.isOpen && "opacity-60"
                   )}>
                     <CardContent className="p-0">
-                      <div className="flex">
+                      <div className="flex gap-4">
                         {/* Cafe Image */}
                         <div className="relative w-32 h-32 shrink-0">
                           <div 
@@ -310,7 +310,7 @@ export default function ExplorePage() {
                         </div>
 
                         {/* Cafe Info */}
-                        <div className="flex-1 p-3">
+                        <div className="flex-1 py-3 pr-3">
                           <div className="flex items-start justify-between mb-1">
                             <div>
                               <h3 className="font-semibold text-espresso-900">{cafe.name}</h3>
@@ -340,12 +340,12 @@ export default function ExplorePage() {
                                 <FeatureIcon key={feature} feature={feature} />
                               ))}
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex gap-2">
                               {cafe.tags.slice(0, 2).map((tag) => (
                                 <Badge 
                                   key={tag} 
                                   variant="outline" 
-                                  className="text-[10px] border-cream-300 text-espresso-600 px-1.5"
+                                  className="text-[10px] border-cream-300 text-espresso-600 px-2"
                                 >
                                   {tag}
                                 </Badge>
@@ -374,4 +374,3 @@ export default function ExplorePage() {
     </div>
   )
 }
-

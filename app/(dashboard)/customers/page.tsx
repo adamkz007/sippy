@@ -38,6 +38,7 @@ interface Customer {
   totalOrders: number
   lastOrder: string | null
   coffeeProfile: CoffeeProfile | null
+  isLead?: boolean
 }
 
 interface Stats {
@@ -257,11 +258,18 @@ export default function CustomersPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold">{customer.name || "Unknown"}</p>
+                    {customer.isLead && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        Unregistered
+                      </Badge>
+                    )}
                     <Badge className={getTierColor(customer.tier)}>
                       {customer.tier}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{customer.email}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {customer.email || customer.phone}
+                  </p>
                 </div>
 
                 <div className="hidden md:flex items-center gap-8 text-sm">
@@ -299,7 +307,7 @@ export default function CustomersPage() {
             <p className="text-lg font-medium">No customers found</p>
             <p className="text-muted-foreground">
               {stats.totalCustomers === 0 
-                ? "Customers will appear here after they place orders" 
+                ? "Customers will appear here after they place orders or you scan them in" 
                 : "Try adjusting your search or filters"
               }
             </p>

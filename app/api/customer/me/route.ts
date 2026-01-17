@@ -33,6 +33,16 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
+    if ((!user.name && session.user.name) || (!user.image && session.user.image)) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          ...(!user.name && session.user.name ? { name: session.user.name } : {}),
+          ...(!user.image && session.user.image ? { image: session.user.image } : {}),
+        },
+      })
+    }
+
     // If user doesn't have a customer profile, create one
     let customer = user.customer
     if (!customer) {
@@ -138,4 +148,3 @@ export async function PATCH(req: Request) {
     )
   }
 }
-

@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { 
   ArrowLeft,
   User,
   Mail,
   Phone,
-  MapPin,
   Bell,
   Moon,
   Globe,
@@ -23,25 +22,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
-// Mock user data
-const user = {
-  name: "Alex Chen",
-  email: "alex@example.com",
-  phone: "+61 412 345 678",
-  image: null,
-  defaultAddress: "123 Coffee Street, Melbourne VIC 3000",
-  notifications: {
-    orderUpdates: true,
-    promotions: true,
-    rewards: true,
-    newCafes: false,
-  },
-  preferences: {
-    darkMode: false,
-    language: "English",
-  },
-}
 
 const ToggleSwitch = ({ 
   checked, 
@@ -69,24 +49,83 @@ const ToggleSwitch = ({
 
 export default function SettingsPage() {
   const router = useRouter()
+  const phoneInputRef = useRef<HTMLInputElement | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [userImage, setUserImage] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  type NotificationKey = "orderUpdates" | "promotions"
   const [formData, setFormData] = useState({
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    address: user.defaultAddress,
+    name: "",
+    email: "",
+    phone: "",
   })
-  const [notifications, setNotifications] = useState(user.notifications)
-  const [preferences, setPreferences] = useState(user.preferences)
+  const [notifications, setNotifications] = useState<Record<NotificationKey, boolean>>({
+    orderUpdates: true,
+    promotions: true,
+  })
+  const [preferences, setPreferences] = useState({
+    darkMode: false,
+    language: "English",
+  })
   const [isEditing, setIsEditing] = useState(false)
+  const missingPhone = !formData.phone || formData.phone.trim().length === 0
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const res = await fetch("/api/customer/me", { cache: "no-store" })
+        if (!res.ok) {
+          throw new Error("Failed to fetch profile")
+        }
+        const data = await res.json()
+        if (!active) return
+        setFormData({
+          name: data.user?.name || "",
+          email: data.user?.email || "",
+          phone: data.user?.phone || "",
+        })
+        setUserImage(data.user?.image || null)
+      } catch {
+      } finally {
+        if (active) setLoading(false)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleBack = useCallback(() => {
     router.push('/home')
   }, [router])
 
-  const handleSave = useCallback(() => {
-    // Save logic here
-    setIsEditing(false)
-  }, [])
+  const handleSave = useCallback(async () => {
+    setSaving(true)
+    try {
+      const payload = {
+        name: formData.name.trim() || null,
+        phone: formData.phone.trim() || null,
+      }
+      const res = await fetch("/api/customer/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) return
+
+      const updated = await res.json()
+      setFormData((prev) => ({
+        ...prev,
+        name: updated.user?.name ?? prev.name,
+        phone: updated.user?.phone ?? prev.phone,
+      }))
+      setIsEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }, [formData.name, formData.phone])
 
   return (
     <div className="min-h-screen pb-8 animate-in fade-in duration-200">
@@ -100,22 +139,47 @@ export default function SettingsPage() {
             <h1 className="text-lg font-bold text-espresso-900 font-display">Settings</h1>
           </div>
           {isEditing && (
-            <Button size="sm" onClick={handleSave}>
+            <Button size="sm" onClick={handleSave} disabled={saving}>
               <Check className="w-4 h-4 mr-1" />
-              Save
+              {saving ? "Saving..." : "Save"}
             </Button>
           )}
         </div>
       </header>
 
       <div className="px-4 py-6 space-y-6">
+        {loading ? (
+          <div className="px-1 text-sm text-espresso-500">Loading profile…</div>
+        ) : null}
+        {!loading && missingPhone ? (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Phone className="w-5 h-5 text-amber-600" />
+                <div>
+                  <p className="text-sm font-medium text-espresso-900">Add your phone number</p>
+                  <p className="text-xs text-espresso-600">Secure your account and enable SMS updates</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setIsEditing(true)
+                  setTimeout(() => phoneInputRef.current?.focus(), 0)
+                }}
+              >
+                Add phone
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
         {/* Profile Photo */}
         <div className="flex flex-col items-center">
           <div className="relative mb-4">
             <Avatar className="w-24 h-24 border-4 border-cream-200">
-              <AvatarImage src={user.image || undefined} />
+              <AvatarImage src={userImage || undefined} />
               <AvatarFallback className="bg-gradient-to-br from-espresso-100 to-espresso-200 text-espresso-700 text-2xl font-semibold">
-                {user.name.split(' ').map(n => n[0]).join('')}
+                {(formData.name || "U N").split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
             <Button
@@ -153,13 +217,13 @@ export default function SettingsPage() {
                   <Mail className="w-4 h-4" />
                   Email
                 </Label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  disabled={!isEditing}
-                  className="bg-cream-50 border-cream-200"
-                />
+              <Input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                disabled={true}
+                className="bg-cream-50 border-cream-200"
+              />
               </div>
               
               <div className="space-y-2">
@@ -167,27 +231,17 @@ export default function SettingsPage() {
                   <Phone className="w-4 h-4" />
                   Phone
                 </Label>
-                <Input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  disabled={!isEditing}
-                  className="bg-cream-50 border-cream-200"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-espresso-700 flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Default Address
-                </Label>
-                <Input
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  disabled={!isEditing}
-                  className="bg-cream-50 border-cream-200"
-                />
-              </div>
+              <Input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                disabled={!isEditing}
+                className="bg-cream-50 border-cream-200"
+                ref={phoneInputRef}
+              />
+            </div>
+            
+            
             </CardContent>
           </Card>
         </div>
@@ -200,12 +254,20 @@ export default function SettingsPage() {
           </h3>
           <Card className="border-cream-200/50 shadow-sm">
             <CardContent className="p-0">
-              {[
-                { key: "orderUpdates", label: "Order Updates", description: "Get notified when your order status changes" },
-                { key: "promotions", label: "Promotions", description: "Receive special offers and deals" },
-                { key: "rewards", label: "Rewards", description: "Updates on points and rewards" },
-                { key: "newCafes", label: "New Cafes", description: "Discover new cafes in your area" },
-              ].map((item, index, arr) => (
+              {(
+                [
+                  {
+                    key: "orderUpdates",
+                    label: "Order Updates",
+                    description: "Get notified when your order status changes",
+                  },
+                  {
+                    key: "promotions",
+                    label: "Promotions & News",
+                    description: "Receive special offers, announcements, and product news",
+                  },
+                ] as const
+              ).map((item, index, arr) => (
                 <div
                   key={item.key}
                   className={cn(
@@ -218,8 +280,10 @@ export default function SettingsPage() {
                     <p className="text-xs text-espresso-500">{item.description}</p>
                   </div>
                   <ToggleSwitch
-                    checked={notifications[item.key as keyof typeof notifications]}
-                    onChange={(checked) => setNotifications({ ...notifications, [item.key]: checked })}
+                    checked={notifications[item.key]}
+                    onChange={(checked) =>
+                      setNotifications((prev) => ({ ...prev, [item.key]: checked }))
+                    }
                   />
                 </div>
               ))}

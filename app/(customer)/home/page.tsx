@@ -15,10 +15,10 @@ import {
   Gift,
   TrendingUp,
   Navigation,
-  Heart,
   Loader2,
   LocateFixed,
-  AlertCircle
+  AlertCircle,
+  Phone
 } from "lucide-react"
 import { cn, formatCurrency } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -32,12 +32,13 @@ interface CustomerProfile {
   user: {
     name: string | null
     email: string
+    phone?: string | null
   }
   loyalty: {
     tier: string
     pointsBalance: number
   }
-  vouchers: any[]
+  vouchers: unknown[]
   stats: {
     totalOrders: number
     favoriteCafes: number
@@ -97,15 +98,17 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } }
 }
 
-const getGreeting = () => {
-  const hour = new Date().getHours()
-  if (hour < 12) return "Good morning ☕"
-  if (hour < 17) return "Good afternoon ☕"
-  return "Good evening ☕"
+const getGreeting = (date: Date = new Date()) => {
+  const hour = date.getHours()
+  if (hour >= 5 && hour < 12) return "Good morning ☕"
+  if (hour >= 12 && hour < 17) return "Good afternoon ☕"
+  if (hour >= 17 && hour < 22) return "Good evening ☕"
+  return "Good night ☕"
 }
 
 export default function HomePage() {
   const { data: session, status: sessionStatus } = useSession()
+  const [greeting, setGreeting] = useState(() => getGreeting())
   const [searchQuery, setSearchQuery] = useState("")
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -121,6 +124,16 @@ export default function HomePage() {
     permissionState,
     isSupported 
   } = useGeolocation()
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setGreeting(getGreeting())
+    }, 60_000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [])
 
   // Fetch profile
   useEffect(() => {
@@ -178,6 +191,7 @@ export default function HomePage() {
   const points = profile?.loyalty?.pointsBalance || 0
   const voucherCount = profile?.vouchers?.length || 0
   const userName = profile?.user?.name || session?.user?.name || "Guest"
+  const missingPhone = !!session && !loading && (!profile?.user?.phone || profile.user.phone.trim().length === 0)
 
   return (
     <motion.div 
@@ -190,10 +204,20 @@ export default function HomePage() {
       <motion.header variants={item} className="sticky top-0 z-40 bg-cream-50/80 backdrop-blur-xl border-b border-cream-200/50 px-4 py-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-sm text-espresso-500 font-medium">{getGreeting()}</p>
-            <h1 className="text-xl font-bold text-espresso-900 font-display">
-              {session ? `Hi, ${userName.split(' ')[0]}` : "Find your coffee"}
-            </h1>
+            <p className="text-sm text-espresso-500 font-medium">{greeting}</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-espresso-900 font-display">
+                {session ? `Hi, ${userName.split(' ')[0]}` : "Find your coffee"}
+              </h1>
+              {missingPhone && (
+                <Link href="/profile/settings">
+                  <Button variant="secondary" size="sm" className="h-7 px-2 text-xs flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5" />
+                    Add mobile
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
           {session ? (
             <Link href="/loyalty">

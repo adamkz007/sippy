@@ -789,20 +789,15 @@ async function main() {
 
   console.log("✅ Created products for all cafes")
 
-  console.log("")
-  console.log("🎉 Seed completed!")
-  console.log("")
-  console.log("Demo credentials:")
-  console.log("  Cafe Owner:")
-  console.log("    Email: demo@sippy.coffee")
-  console.log("    Password: demo1234")
-  console.log("")
-  console.log("  Customer:")
-  console.log("    Email: alex@example.com")
-  console.log("    Password: customer123")
-  console.log("    Tier: GOLD")
-  console.log("    Points: 2,450")
-  console.log("    Orders: 47")
+  console.log([
+    "",
+    "🎉 Seed completed!",
+    "",
+    "Demo credentials",
+    "• Cafe Owner: demo@sippy.coffee / demo1234",
+    "• Customer: alex@example.com / customer123 (Tier GOLD, Points 2,450, Orders 47)",
+    ""
+  ].join("\n"))
 }
 
 main()

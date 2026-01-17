@@ -59,8 +59,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected routes - redirect to login if not authenticated
-  const protectedRoutes = ["/dashboard", "/pos", "/orders", "/menu", "/customers", "/analytics", "/loyalty", "/settings"]
-  const customerRoutes = ["/home", "/explore", "/profile"]
+  const protectedRoutes = ["/dashboard", "/pos", "/orders", "/menu", "/customers", "/analytics", "/settings"]
+  const customerRoutes = ["/home", "/explore", "/loyalty", "/profile"]
   
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
   const isCustomerRoute = customerRoutes.some(route => pathname.startsWith(route))
@@ -98,4 +98,3 @@ export const config = {
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*|order).*)",
   ],
 }
-

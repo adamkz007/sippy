@@ -8,8 +8,6 @@ import {
   Gift, 
   Sparkles, 
   ChevronRight,
-  Coffee,
-  Star,
   Clock,
   Check,
   TrendingUp,
@@ -17,6 +15,7 @@ import {
   Zap,
   Loader2
 } from "lucide-react"
+import QRCode from "react-qr-code"
 import { cn, formatCurrency, formatPoints, getTierColor, getCurrencyInfo } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -25,13 +24,27 @@ import { Separator } from "@/components/ui/separator"
 
 interface CustomerProfile {
   id: string
+  user?: {
+    id: string
+    name?: string | null
+    email?: string | null
+    phone?: string | null
+    image?: string | null
+  }
   loyalty: {
     tier: string
     pointsBalance: number
     lifetimePoints: number
     lifetimeSpend: number
   }
-  vouchers: any[]
+  vouchers: Voucher[]
+}
+
+interface Voucher {
+  id: string
+  code: string
+  type: string
+  expiresAt: string
 }
 
 interface PointTransaction {
@@ -131,9 +144,14 @@ const formatDate = (dateString: string) => {
 export default function LoyaltyPage() {
   const { data: session, status: sessionStatus } = useSession()
   const [activeTab, setActiveTab] = useState<"rewards" | "history">("rewards")
+  const [mounted, setMounted] = useState(false)
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
   const [transactions, setTransactions] = useState<PointTransaction[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   useEffect(() => {
     const fetchData = async () => {
@@ -149,6 +167,12 @@ export default function LoyaltyPage() {
         if (profileRes.ok) {
           const profileData = await profileRes.json()
           setProfile(profileData)
+
+          const pointsRes = await fetch(`/api/loyalty/points?customerId=${profileData.id}`)
+          if (pointsRes.ok) {
+            const pointsData = await pointsRes.json()
+            setTransactions(pointsData.transactions || [])
+          }
         }
       } catch (err) {
         console.error("Error fetching loyalty data:", err)
@@ -179,6 +203,17 @@ export default function LoyaltyPage() {
   // Mock streak data (could be fetched from API)
   const streakDays = 7
 
+  const rawPhone = profile?.user?.phone || null
+  const normalizedPhone = rawPhone ? rawPhone.replace(/[\s\-\(\)]/g, "") : ""
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-espresso-600" />
+      </div>
+    )
+  }
+
   if (loading || sessionStatus === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -191,9 +226,9 @@ export default function LoyaltyPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4">
         <h2 className="text-xl font-bold text-espresso-900">Sign in to view rewards</h2>
-        <Link href="/login">
-          <Button>Sign In</Button>
-        </Link>
+        <Button asChild>
+          <Link href="/login">Sign In</Link>
+        </Button>
       </div>
     )
   }
@@ -301,6 +336,48 @@ export default function LoyaltyPage() {
             animate={{ opacity: 1 }}
             className="space-y-4"
           >
+            <Card className="border-cream-200/50">
+              <CardContent className="p-4">
+                {rawPhone ? (
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-white border border-cream-200">
+                      <QRCode value={normalizedPhone} size={160} bgColor="transparent" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-espresso-900">Your QR Code</h3>
+                      <p className="text-sm text-espresso-600 mt-1">
+                        Cafe can scan this code or enter your phone number to log points.
+                      </p>
+                      <div className="mt-3 text-sm">
+                        <span className="text-espresso-500">Phone:</span>{" "}
+                        <span className="font-medium text-espresso-900">{rawPhone}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 ml-2"
+                          onClick={() => navigator.clipboard?.writeText(rawPhone)}
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-espresso-900">Add your phone number</h3>
+                      <p className="text-sm text-espresso-600">
+                        To get a scannable QR, add a phone number to your profile.
+                      </p>
+                    </div>
+                    <Button asChild size="sm" className="h-9">
+                      <Link href="/profile/settings">Go to Settings</Link>
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* My Vouchers */}
             {profile?.vouchers && profile.vouchers.length > 0 && (
               <div className="mb-6">
@@ -401,12 +478,12 @@ export default function LoyaltyPage() {
                     ))}
                   </div>
                   <Separator className="my-3" />
-                  <Link href="/loyalty/tiers">
-                    <Button variant="ghost" className="w-full justify-between h-10">
+                  <Button asChild variant="ghost" className="w-full justify-between h-10">
+                    <Link href="/loyalty/tiers">
                       View all tiers
                       <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             </motion.div>

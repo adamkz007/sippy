@@ -54,7 +54,7 @@ function LoginContent() {
         router.push(accountType === "cafe" ? "/dashboard" : "/home")
         router.refresh()
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -71,7 +71,7 @@ function LoginContent() {
       await signIn("google", {
         callbackUrl: accountType === "cafe" ? "/dashboard" : "/home",
       })
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to sign in with Google",
@@ -193,7 +193,10 @@ function LoginContent() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium text-primary underline underline-offset-4 rounded-md px-1.5 py-0.5 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+                >
                   Forgot password?
                 </Link>
               </div>

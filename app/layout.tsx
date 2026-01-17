@@ -31,6 +31,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="format-detection" content="telephone=no" />
+      </head>
       <body className={`${workSans.variable} ${outfitHeading.variable} font-sans antialiased`}>
         <Providers>
           {children}
@@ -40,4 +43,3 @@ export default function RootLayout({
     </html>
   )
 }
-
